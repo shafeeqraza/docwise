@@ -1,59 +1,326 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# DocWise - AI Customer Support Platform
 
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <strong>Multi-tenant SaaS platform for AI-powered customer support with RAG (Retrieval-Augmented Generation)</strong>
 </p>
 
-## About Laravel
+DocWise is a comprehensive Laravel-based platform that enables companies to provide intelligent customer support through AI-powered chat. The system uses document ingestion, vector embeddings, and retrieval-augmented generation to deliver accurate, context-aware responses to customer queries.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🚀 Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Core Capabilities
 
-## Learning Laravel
+-   **Document Management**: Upload, process, and manage documents with automatic chunking and embedding generation
+-   **AI Chat Support**: Intelligent chat interface powered by RAG (Retrieval-Augmented Generation) with citation support
+-   **Multi-Tenant Architecture**: Complete data isolation per company with role-based access control
+-   **Widget Integration**: Embeddable chat widget for customer websites
+-   **API-First Design**: RESTful API for all operations, suitable for any frontend framework
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### Advanced Features
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+-   **Super Admin Portal**: Platform-wide management and analytics
+-   **Usage Tracking**: Comprehensive metrics for tokens, API calls, and chat sessions
+-   **Billing System**: Subscription plans with usage-based billing and invoice generation
+-   **Analytics Dashboard**: Real-time insights into documents, chats, and user engagement
+-   **Feedback System**: Collect and analyze customer feedback on AI responses
+-   **Rate Limiting**: Configurable rate limits per API key and subscription plan
+-   **Audit Logging**: Complete audit trail for admin actions and system events
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## 🛠 Tech Stack
 
-### Premium Partners
+-   **Framework**: Laravel 12.x
+-   **PHP**: ^8.2
+-   **Database**: MySQL
+-   **Authentication**: Laravel Sanctum (Token-based)
+-   **Vector Store**: Qdrant (for embeddings and similarity search)
+-   **Frontend**: Separate repository (React/Vue/Next.js recommended)
+-   **Queue System**: Laravel Queues for async document processing
+-   **Caching**: Redis (recommended)
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+---
 
-## Contributing
+## 📋 Requirements
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+-   PHP >= 8.2
+-   Composer
+-   MySQL >= 8.0
+-   Node.js >= 18.x & NPM
+-   Redis (optional, for caching and queues)
+-   Qdrant (for vector storage)
 
-## Code of Conduct
+---
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 🔧 Installation
 
-## Security Vulnerabilities
+### 1. Clone the Repository
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+git clone https://github.com/your-org/docwise.git
+cd docwise
+```
 
-## License
+### 2. Install Dependencies
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+composer install
+npm install
+```
+
+### 3. Environment Configuration
+
+Copy the `.env.example` file to `.env`:
+
+```bash
+cp .env.example .env
+```
+
+Generate application key:
+
+```bash
+php artisan key:generate
+```
+
+Configure your `.env` file with database credentials, Qdrant connection, and other required settings:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=docwise
+DB_USERNAME=your_username
+DB_PASSWORD=your_password
+
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+QDRANT_API_KEY=your_qdrant_api_key
+
+# Add other required configuration...
+```
+
+### 4. Run Migrations and Seeders
+
+```bash
+php artisan migrate
+php artisan db:seed --class=SuperAdminSeeder
+```
+
+### 5. Build Frontend Assets
+
+```bash
+npm run build
+```
+
+### 6. Start Development Server
+
+Using Laravel's built-in server:
+
+```bash
+php artisan serve
+```
+
+Or use the provided dev script (includes queue worker and logs):
+
+```bash
+composer run dev
+```
+
+---
+
+## 📚 Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+-   **[API Endpoints](docs/api-endpoints.md)** - Complete API reference with request/response examples
+-   **[API Reference](docs/api-reference.md)** - Detailed API documentation
+-   **[Authentication Flow](docs/authentication-flow.md)** - Authentication and authorization guide
+-   **[System Architecture](docs/system-architecture.md)** - Architecture overview and design decisions
+-   **[MySQL Schema](docs/mysql-schema.md)** - Database schema documentation
+-   **[SOLID Architecture](docs/solid-architecture.md)** - Code organization and patterns
+-   **[Widget Implementation](docs/widget-implementation.md)** - Chat widget integration guide
+-   **[Build Plan](docs/build-plan.md)** - Development roadmap and implementation guide
+
+---
+
+## 🏗 Project Structure
+
+```
+docwise/
+├── app/
+│   ├── Contracts/V1/          # Service interfaces
+│   ├── Exceptions/             # Custom exceptions
+│   ├── Http/
+│   │   ├── Controllers/V1/     # API controllers
+│   │   ├── Middleware/         # Custom middleware
+│   │   ├── Requests/           # Form requests
+│   │   └── Resources/          # API resources
+│   ├── Models/                 # Eloquent models
+│   ├── Providers/              # Service providers
+│   ├── Repositories/V1/        # Repository pattern implementations
+│   └── Services/V1/            # Business logic services
+├── database/
+│   ├── migrations/             # Database migrations
+│   └── seeders/                # Database seeders
+├── docs/                       # Documentation
+├── routes/
+│   ├── api.php                 # API routes
+│   └── web.php                 # Web routes
+└── tests/                      # Test suites
+```
+
+---
+
+## 🔐 Authentication
+
+The platform uses **Laravel Sanctum** for token-based authentication. There are three main authentication methods:
+
+1. **Super Admin Authentication**: Token-based auth for platform administrators
+
+    - Endpoint: `POST /api/superadmin/auth/login`
+    - Rate limit: 5 attempts per minute per IP
+
+2. **Company User Authentication**: Token-based auth for company admins and agents
+
+    - Endpoint: `POST /api/auth/login` (to be implemented)
+
+3. **API Key Authentication**: Company API keys for widget and external integrations
+    - Header: `Authorization: Bearer {api_key}`
+
+See [Authentication Flow Documentation](docs/authentication-flow.md) for detailed information.
+
+---
+
+## 🧪 Testing
+
+Run the test suite:
+
+```bash
+composer run test
+```
+
+Or use PHPUnit directly:
+
+```bash
+php artisan test
+```
+
+---
+
+## 📝 Code Style
+
+This project uses Laravel Pint for code style enforcement:
+
+```bash
+./vendor/bin/pint
+```
+
+---
+
+## 🚀 Deployment
+
+### Production Checklist
+
+1. Set `APP_ENV=production` in `.env`
+2. Run `php artisan config:cache`
+3. Run `php artisan route:cache`
+4. Run `php artisan view:cache`
+5. Ensure queue workers are running: `php artisan queue:work`
+6. Set up cron job for scheduled tasks:
+    ```bash
+    * * * * * cd /path-to-your-project && php artisan schedule:run >> /dev/null 2>&1
+    ```
+
+### Docker Deployment
+
+Docker configuration files are available in the `infrastructure/docker/` directory (if present).
+
+---
+
+## 🔄 API Versioning
+
+The API uses version prefixes (`/api/v1/`) for future compatibility. Current version is **v1**.
+
+---
+
+## 👥 User Roles
+
+-   **Super Admin**: Platform-wide access, can manage all companies
+-   **Company Admin**: Full access within their company
+-   **Company Agent**: Limited access for customer support operations
+-   **API User**: Programmatic access via API keys
+
+---
+
+## 📊 Key Endpoints
+
+### Super Admin
+
+-   `POST /api/superadmin/auth/login` - Authenticate super admin
+-   `POST /api/superadmin/auth/logout` - Logout super admin
+-   `GET /api/superadmin/auth/me` - Get current super admin
+
+### Company Management
+
+-   `GET /api/companies` - List companies (Super Admin)
+-   `POST /api/companies` - Create company (Super Admin)
+-   `GET /api/companies/{id}` - Get company details
+-   `PUT /api/companies/{id}` - Update company
+
+### Documents
+
+-   `GET /api/documents` - List documents
+-   `POST /api/documents` - Upload document
+-   `GET /api/documents/{id}` - Get document details
+
+### Chat
+
+-   `GET /api/chat-sessions` - List chat sessions
+-   `POST /api/chat-sessions` - Create chat session
+-   `POST /api/chat-sessions/{id}/messages` - Send message
+
+See [API Endpoints Documentation](docs/api-endpoints.md) for complete reference.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these guidelines:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Standards
+
+-   Follow PSR-12 coding standards
+-   Write tests for new features
+-   Update documentation as needed
+-   Ensure all tests pass before submitting PR
+
+---
+
+## 📄 License
+
+This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+---
+
+## 🆘 Support
+
+For support, please open an issue in the GitHub repository or contact the development team.
+
+---
+
+## 🙏 Acknowledgments
+
+-   Built with [Laravel](https://laravel.com)
+-   Vector storage powered by [Qdrant](https://qdrant.tech)
+
+---
+
+<p align="center">Made with ❤️ for intelligent customer support</p>
