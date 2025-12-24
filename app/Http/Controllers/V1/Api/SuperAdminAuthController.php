@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\SuperAdminLoginRequest;
 use App\Http\Resources\LoginResponseResource;
 use App\Http\Resources\SuperAdminResource;
+use App\Repositories\V1\AdminActionRepositoryInterface;
 use App\Services\V1\Auth\AuthCookieService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,11 +25,14 @@ class SuperAdminAuthController extends Controller
      * @param SuperAdminLoginServiceInterface $superAdminLoginService
      * @param SuperAdminLogOutServiceInterface $superAdminLogOutService
      * @param AuthCookieService $authCookieService
+     * @param AdminActionRepositoryInterface $adminActionRepository
      */
     public function __construct(
         private readonly SuperAdminLoginServiceInterface $superAdminLoginService,
         private readonly SuperAdminLogOutServiceInterface $superAdminLogOutService,
-        private readonly AuthCookieService $authCookieService
+        private readonly AuthCookieService $authCookieService,
+        private readonly AdminActionRepositoryInterface $adminActionRepository,
+
     ) {}
 
     /**
@@ -46,6 +50,19 @@ class SuperAdminAuthController extends Controller
             $response = $this->respondResource(
                 new LoginResponseResource($loginData),
                 message: 'Login successful'
+            );
+
+            // Log admin action
+            $this->adminActionRepository->logAction(
+                user: $loginData['user'],
+                action: 'auth.login',
+                targetCompanyId: null,
+                details: [
+                    'email' => $loginData['user'],
+                ],
+                ipAddress: $request->ip(),
+                userAgent: $request->userAgent(),
+                request: $request
             );
 
             return $this->authCookieService->attachAuthCookie($response, $token);
@@ -68,9 +85,20 @@ class SuperAdminAuthController extends Controller
             $user = $request->user();
 
             $this->superAdminLogOutService->logout(
+                $user
+            );
+
+            // Log admin action before revoking token
+            $this->adminActionRepository->logAction(
                 user: $user,
+                action: 'auth.logout',
+                targetCompanyId: null,
+                details: [
+                    'email' => $user->email,
+                ],
                 ipAddress: $request->ip(),
-                userAgent: $request->userAgent()
+                userAgent: $request->userAgent(),
+                request: $request
             );
 
             $response = $this->respondMessage('Logged out successfully', 200);
@@ -91,6 +119,6 @@ class SuperAdminAuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
-        return $this->respondResource(new SuperAdminResource($user), message: 'OK');
+        return $this->respondResource(new SuperAdminResource($user));
     }
 }

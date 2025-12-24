@@ -3,8 +3,6 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Contracts\Validation\Validator;
-use Illuminate\Http\Exceptions\HttpResponseException;
 
 class SuperAdminLoginRequest extends FormRequest
 {
@@ -62,18 +60,7 @@ class SuperAdminLoginRequest extends FormRequest
      *
      * @throws HttpResponseException
      */
-    protected function failedValidation(Validator $validator): void
-    {
-        $errors = $validator->errors();
 
-        throw new HttpResponseException(
-            response()->json([
-                'error' => 'Validation failed',
-                'code' => 'VALIDATION_ERROR',
-                'details' => $errors->toArray(),
-            ], 422)
-        );
-    }
 
     /**
      * Prepare the data for validation.
@@ -88,4 +75,3 @@ class SuperAdminLoginRequest extends FormRequest
         }
     }
 }
-

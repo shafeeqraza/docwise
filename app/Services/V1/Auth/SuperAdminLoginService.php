@@ -15,14 +15,12 @@ class SuperAdminLoginService implements SuperAdminLoginServiceInterface
      * Create a new service instance.
      *
      * @param UserRepositoryInterface $userRepository
-     * @param AdminActionRepositoryInterface $adminActionRepository
      * @param LoginAttemptService $loginAttemptService
      * @param AuthenticationValidator $authenticationValidator
      * @param TokenService $tokenService
      */
     public function __construct(
         private readonly UserRepositoryInterface $userRepository,
-        private readonly AdminActionRepositoryInterface $adminActionRepository,
         private readonly LoginAttemptService $loginAttemptService,
         private readonly AuthenticationValidator $authenticationValidator,
         private readonly TokenService $tokenService
@@ -69,20 +67,6 @@ class SuperAdminLoginService implements SuperAdminLoginServiceInterface
 
         // Update last login timestamp
         $this->userRepository->updateLastLogin($user);
-
-        // Log admin action
-        $this->adminActionRepository->logAction(
-            user: $user,
-            action: 'auth.login',
-            targetCompanyId: null,
-            details: [
-                'email' => $user->email,
-                'ip_address' => $ipAddress,
-                'user_agent' => $req->userAgent(),
-            ],
-            ipAddress: $ipAddress,
-            userAgent: $req->userAgent()
-        );
 
         return [
             'token' => $token,

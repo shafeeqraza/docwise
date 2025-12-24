@@ -3,6 +3,7 @@
 namespace App\Repositories\V1;
 
 use App\Models\User;
+use Illuminate\Http\Request;
 
 interface AdminActionRepositoryInterface
 {
@@ -15,6 +16,7 @@ interface AdminActionRepositoryInterface
      * @param array $details
      * @param string $ipAddress
      * @param string|null $userAgent
+     * @param Request|null $request
      * @return void
      */
     public function logAction(
@@ -23,6 +25,7 @@ interface AdminActionRepositoryInterface
         ?int $targetCompanyId = null,
         array $details = [],
         string $ipAddress = '',
-        ?string $userAgent = null
+        ?string $userAgent = null,
+        ?Request $request = null
     ): void;
 }

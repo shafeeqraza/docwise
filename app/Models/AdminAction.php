@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Auth;
 
 class AdminAction extends Model
 {
@@ -33,7 +34,7 @@ class AdminAction extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($model) {
             if (empty($model->created_at)) {
                 $model->created_at = now();
@@ -55,25 +56,38 @@ class AdminAction extends Model
     // Helper methods
     public static function log(string $action, ?int $targetCompanyId = null, array $details = []): void
     {
-        $user = auth()->user();
-        
+        $user = Auth::user();
+
         if (!$user || !$user->isSuperAdmin()) {
             return;
         }
-        
+
+        $request = request();
+
+        // Merge request information into details
+        $requestDetails = [
+            'method' => $request->method(),
+            'url' => $request->fullUrl(),
+            'path' => $request->path(),
+            'route' => $request->route()?->getName(),
+            'referer' => $request->header('referer'),
+        ];
+
         static::create([
             'admin_user_id' => $user->id,
             'target_company_id' => $targetCompanyId,
             'action' => $action,
-            'details' => $details,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
+            'details' => array_merge($requestDetails, $details),
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
         ]);
     }
 
     public function getActionDescription(): string
     {
         $descriptions = [
+            'auth.login' => 'Logged in',
+            'auth.logout' => 'Logged out',
             'company.created' => 'Created company',
             'company.updated' => 'Updated company',
             'company.deleted' => 'Deleted company',
@@ -90,7 +104,7 @@ class AdminAction extends Model
             'system.backup_created' => 'Created system backup',
             'system.maintenance_mode' => 'Enabled maintenance mode',
         ];
-        
+
         return $descriptions[$this->action] ?? $this->action;
     }
 
@@ -99,7 +113,7 @@ class AdminAction extends Model
         if (!$this->targetCompany) {
             return 'System-wide';
         }
-        
+
         return $this->targetCompany->name;
     }
 
@@ -108,7 +122,7 @@ class AdminAction extends Model
         if (!$this->details) {
             return '';
         }
-        
+
         $parts = [];
         foreach ($this->details as $key => $value) {
             if (is_array($value)) {
@@ -116,7 +130,7 @@ class AdminAction extends Model
             }
             $parts[] = "{$key}: {$value}";
         }
-        
+
         return implode(', ', $parts);
     }
 
@@ -129,7 +143,7 @@ class AdminAction extends Model
             'system.backup_created',
             'system.maintenance_mode',
         ];
-        
+
         return in_array($this->action, $criticalActions);
     }
 
@@ -151,5 +165,10 @@ class AdminAction extends Model
     public function isBillingAction(): bool
     {
         return str_starts_with($this->action, 'billing.');
+    }
+
+    public function isAuthAction(): bool
+    {
+        return str_starts_with($this->action, 'auth.');
     }
 }
