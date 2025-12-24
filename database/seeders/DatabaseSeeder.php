@@ -15,9 +15,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Seed super admin users
+        // Seed super admin users (creates system company)
         $this->call([
             SuperAdminSeeder::class,
+        ]);
+
+        // Seed default companies
+        $this->call([
+            CompanySeeder::class,
         ]);
 
         // User::factory(10)->create();
