@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\Handler\ApiExceptionHandler;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -22,7 +23,24 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \App\Http\Middleware\AuthenticateWithCookie::class,
         ]);
+
+        $middleware->redirectGuestsTo(fn() => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+
+        // Handle all other API exceptions
+        $exceptions->render(function (\Throwable $e) {
+            return match (true) {
+                $e instanceof \App\Exceptions\AuthenticationException => ApiExceptionHandler::unauthenticated(),
+                $e instanceof \Illuminate\Auth\AuthenticationException => ApiExceptionHandler::unauthenticated(),
+                $e instanceof \Illuminate\Validation\ValidationException => ApiExceptionHandler::validationError($e->errors()),
+                $e instanceof \Illuminate\Database\Eloquent\ModelNotFoundException => ApiExceptionHandler::notFound(),
+                $e instanceof \Illuminate\Auth\Access\AuthorizationException => ApiExceptionHandler::forbidden(),
+                $e instanceof \Symfony\Component\HttpKernel\Exception\HttpException => ApiExceptionHandler::httpError(
+                    $e->getMessage(),
+                    $e->getStatusCode()
+                ),
+                default => ApiExceptionHandler::genericError($e),
+            };
+        });
     })->create();

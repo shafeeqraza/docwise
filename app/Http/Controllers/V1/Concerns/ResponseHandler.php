@@ -11,22 +11,27 @@ trait ResponseHandler
      * Standard API response wrapper.
      */
     protected function respond(
-        mixed $data = [],
-        string $message = 'OK',
+        mixed $body = [],
         int $statusCode = 200,
-        array $headers = []
+        array $headers = [],
     ): JsonResponse {
-        return (new JsonResponse(
-            data: [
-                'message' => $message,
-                'success' => $statusCode < 400,
-                'statusCode' => $statusCode,
-                'data' => $data ?? [],
-            ],
+        return new JsonResponse(
+            data: $body,
             status: $statusCode,
             headers: $headers,
             options: JSON_UNESCAPED_SLASHES,
-        ));
+        );
+    }
+
+    protected function buildResponseBody(mixed $data = [], string $message = 'OK', int $statusCode = 200, array $errors = [], array $additionalData = []): array
+    {
+        return [
+            'success' => $statusCode < 400,
+            'message' => $message,
+            ...$additionalData,
+            ...(count($errors) ? compact('errors') : []),
+            ...($statusCode < 400 ? compact('data') : []),
+        ];
     }
 
     /**
@@ -35,23 +40,28 @@ trait ResponseHandler
     protected function respondSuccess(mixed $data = [], string $message = 'OK', int $statusCode = 200, array $headers = []): JsonResponse
     {
         return $this->respond(
-            data: $data ?? [],
-            message: $message,
+            body: $this->buildResponseBody(data: $data, message: $message, statusCode: $statusCode),
             statusCode: $statusCode,
-            headers: $headers
+            headers: $headers,
         );
     }
 
     /**
      * Standard error response wrapper (enveloped).
      */
-    protected function respondError(string $message, int $statusCode = 400, mixed $data = [], array $headers = []): JsonResponse
+    protected function respondError(string $message, int $statusCode = 400, mixed $errors = [], array $additionalData = []): JsonResponse
     {
-        return $this->respond(
-            data: $data ?? [],
+        $body = $this->buildResponseBody(
+            errors: $errors,
             message: $message,
             statusCode: $statusCode,
-            headers: $headers
+            additionalData: $additionalData
+        );
+
+        return $this->respond(
+            body: $body,
+            statusCode: $statusCode,
+            headers: [],
         );
     }
 
@@ -61,8 +71,7 @@ trait ResponseHandler
     protected function respondMessage(string $message, int $statusCode = 200, mixed $data = [], array $headers = []): JsonResponse
     {
         return $this->respond(
-            data: $data ?? [],
-            message: $message,
+            body: $this->buildResponseBody(data: $data, message: $message, statusCode: $statusCode),
             statusCode: $statusCode,
             headers: $headers
         );
@@ -78,8 +87,7 @@ trait ResponseHandler
         array $headers = []
     ): JsonResponse {
         return $this->respond(
-            data: $resource,
-            message: $message,
+            body: $this->buildResponseBody(data: $resource, message: $message, statusCode: $statusCode),
             statusCode: $statusCode,
             headers: $headers
         );
