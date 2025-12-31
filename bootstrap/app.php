@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'superadmin' => \App\Http\Middleware\EnsureSuperAdmin::class,
             'auth.cookie' => \App\Http\Middleware\AuthenticateWithCookie::class,
+            'company.scope' => \App\Http\Middleware\ResolveCompany::class,
         ]);
 
         // Add cookie authentication middleware to API routes

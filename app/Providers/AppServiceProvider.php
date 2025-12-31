@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Contracts\V1\SuperAdminLoginServiceInterface;
 use App\Contracts\V1\SuperAdminLogOutServiceInterface;
 use App\Contracts\V1\SuperAdminCompanyServiceInterface;
+use App\Contracts\V1\DocumentServiceInterface;
 use App\Repositories\V1\AdminActionRepositoryInterface;
 use App\Repositories\V1\UserRepositoryInterface;
 use App\Repositories\V1\CompanyRepositoryInterface;
@@ -14,6 +15,7 @@ use App\Repositories\V1\CompanyRepository;
 use App\Services\V1\Auth\SuperAdminLoginService;
 use App\Services\V1\Auth\SuperAdminLogOutService;
 use App\Services\V1\Company\SuperAdminCompanyService;
+use App\Services\V1\Document\DocumentService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -32,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(SuperAdminLoginServiceInterface::class, SuperAdminLoginService::class);
         $this->app->bind(SuperAdminLogOutServiceInterface::class, SuperAdminLogOutService::class);
         $this->app->bind(SuperAdminCompanyServiceInterface::class, SuperAdminCompanyService::class);
+        $this->app->bind(DocumentServiceInterface::class, DocumentService::class);
     }
 
     /**
