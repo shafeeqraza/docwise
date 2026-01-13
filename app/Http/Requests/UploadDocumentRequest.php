@@ -26,7 +26,7 @@ class UploadDocumentRequest extends FormRequest
                 'required',
                 'file',
                 'mimes:pdf,docx,txt,html,md',
-                'max:10240', // 10MB max
+                'max:5120', // 10MB max
             ],
             'title' => [
                 'nullable',

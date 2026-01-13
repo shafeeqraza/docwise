@@ -7,6 +7,7 @@ use Cloudinary\Cloudinary;
 use Cloudinary\Configuration\Configuration;
 use Cloudinary\Transformation\Transformation;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -71,8 +72,7 @@ class FileStorageService
             $folder = config('cloudinary.upload.folder', 'docwise/documents') . '/' . $companyId;
 
             // Get file extension from original filename to preserve file type
-            $extension = strtolower($file->getClientOriginalExtension());
-            $publicId = "{$folder}/{$uuid}" . ($extension ? ".{$extension}" : '');
+            $publicId = "{$folder}/{$uuid}";
 
             // Get original filename for Cloudinary to detect file type correctly
             $originalFilename = $file->getClientOriginalName();
@@ -90,24 +90,6 @@ class FileStorageService
             );
         } catch (\Exception $e) {
             throw new FileUploadException('Failed to upload file to Cloudinary: ' . $e->getMessage(), 0, $e);
-        }
-    }
-
-    /**
-     * Generate Cloudinary URL for a file using public_id.
-     */
-    private function generateFileUrl(string $publicId): string
-    {
-        try {
-            // Try as image first (for PDFs, images, etc.)
-            return $this->getCloudinary()->image($publicId)->secure()->toUrl();
-        } catch (\Exception $e) {
-            // Fallback: Generate URL manually for raw files
-            $cloudName = config('cloudinary.cloud_name');
-            $secure = config('cloudinary.secure', true) ? 'https' : 'http';
-            $resourceType = 'raw';
-
-            return "{$secure}://res.cloudinary.com/{$cloudName}/{$resourceType}/upload/{$publicId}";
         }
     }
 
@@ -157,12 +139,42 @@ class FileStorageService
     }
 
     /**
-     * Get Cloudinary URL for a file using public_id.
-     * Note: This method is kept for backward compatibility and fallback scenarios.
-     * Prefer using the stored file_url from the database.
+     * Download file content from Cloudinary URL.
+     * Uses Admin API to get the correct URL, then downloads with Laravel HTTP client.
+     *
+     * @param string $_fileUrl The Cloudinary URL (kept for backward compatibility, but not used)
+     * @param string $publicId The public ID for error messages
+     * @return string The file content
+     * @throws FileUploadException If download fails
      */
-    public function getFileUrl(string $publicId): string
+    public function downloadFile(string $fileUrl, string $publicId): string
     {
-        return $this->generateFileUrl($publicId);
+        try {
+            $response = Http::timeout(300) // 5 minutes timeout for large files
+                ->connectTimeout(30)
+                ->withUserAgent('DocWise/1.0')
+                ->get($fileUrl);
+
+            if (!$response->successful()) {
+                throw new FileUploadException(
+                    "Failed to download file from Cloudinary: {$publicId}. HTTP Status: {$response->status()}. URL: {$publicId}",
+                    $response->status()
+                );
+            }
+
+            return $response->body();
+        } catch (\Illuminate\Http\Client\RequestException $e) {
+            throw new FileUploadException(
+                "Failed to download file from Cloudinary: {$publicId}. Error: {$e->getMessage()}. URL: {$publicId}",
+                500,
+                $e
+            );
+        } catch (\Exception $e) {
+            throw new FileUploadException(
+                "Failed to download file from Cloudinary: {$publicId}. Error: {$e->getMessage()}",
+                500,
+                $e
+            );
+        }
     }
 }

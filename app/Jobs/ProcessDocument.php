@@ -4,13 +4,12 @@ namespace App\Jobs;
 
 use App\Exceptions\DocumentProcessingException;
 use App\Models\Document;
+use App\Models\DocumentChunk;
 use App\Models\DocumentVersion;
 use App\Models\IngestionJob;
-use App\Services\V1\Document\Processing\DocumentProcessingStatusService;
-use App\Services\V1\Document\Processing\DocumentTextExtractionService;
-use App\Services\V1\Document\Processing\EmbeddingService;
-use App\Services\V1\Document\Processing\TextChunkingService;
-use App\Services\V1\Document\Processing\VectorStoreService;
+use App\Domains\RAG\DTOs\DocumentDTO;
+use App\Domains\RAG\Pipelines\DocumentIngestionPipeline;
+use App\Domains\RAG\Services\DocumentProcessingStatusService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -32,11 +31,8 @@ class ProcessDocument implements ShouldQueue
     ) {}
 
     public function handle(
-        DocumentTextExtractionService $textExtractionService,
-        DocumentProcessingStatusService $statusService,
-        TextChunkingService $chunkingService,
-        EmbeddingService $embeddingService,
-        VectorStoreService $vectorStoreService
+        DocumentIngestionPipeline $pipeline,
+        DocumentProcessingStatusService $statusService
     ): void {
         $document = Document::findOrFail($this->documentId);
         $version = DocumentVersion::findOrFail($this->versionId);
@@ -46,43 +42,40 @@ class ProcessDocument implements ShouldQueue
             // Mark as processing
             $statusService->markAsProcessing($document, $version, $ingestionJob);
 
-            // Step 1: Extract text from document
-            $text = $textExtractionService->extractText($document);
+            // Convert Document to DocumentDTO
+            $documentDTO = new DocumentDTO(
+                id: $document->id,
+                title: $document->title,
+                content: $document->file_url, // File URL for loader
+                fileType: $document->file_type,
+                metadata: $document->metadata ?? []
+            );
 
-            if (empty(trim($text))) {
-                throw new DocumentProcessingException('No text extracted from document');
-            }
-
-            // Step 2: Chunk the text
-            $chunks = $chunkingService->chunkText($text, $document, $version);
-
-            if (empty($chunks)) {
-                throw new DocumentProcessingException('No chunks created from document text');
-            }
-
-            // Step 3: Generate embeddings for chunks
+            // Get embedding model from company
             $company = $document->company;
             $embeddingModel = $company->getEmbeddingModel();
-            $chunksWithEmbeddings = $embeddingService->generateEmbeddingsBatch($chunks, $embeddingModel);
 
-            // Step 4: Store vectors in Qdrant
-            $vectorStoreService->upsertChunks($chunksWithEmbeddings);
-
-            // Update version with chunk count and embedding model
-            $version->update([
-                'chunk_count' => count($chunks),
+            // Process document through pipeline (handles: persist chunks, generate embeddings, store vectors, update chunks and version)
+            $chunkDTOs = $pipeline->process($documentDTO, [
                 'embedding_model' => $embeddingModel,
+                'document_id' => $document->id,
+                'version_id' => $version->id,
+                'company_id' => $document->company_id,
+                'on_complete' => function (int $chunkCount, ?string $model) use ($version, $embeddingModel) {
+                    // Update version with chunk count and embedding model
+                    $version->update([
+                        'chunk_count' => $chunkCount,
+                        'embedding_model' => $model ?? $embeddingModel,
+                    ]);
+                },
             ]);
+
+            if (empty($chunkDTOs)) {
+                throw new DocumentProcessingException('No chunks created from document');
+            }
 
             // Mark as completed
             $statusService->markAsCompleted($document, $version, $ingestionJob);
-
-            Log::info('Document processed successfully', [
-                'document_id' => $document->id,
-                'version_id' => $version->id,
-                'ingestion_job_id' => $ingestionJob->id,
-                'chunks_created' => count($chunks),
-            ]);
         } catch (\Exception $e) {
             $this->handleFailure($document, $version, $ingestionJob, $e, $statusService);
             throw $e;

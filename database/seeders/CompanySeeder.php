@@ -27,7 +27,7 @@ class CompanySeeder extends Seeder
                 'allow_overages' => true,
                 'settings' => [
                     'max_documents' => 500,
-                    'embedding_model' => 'text-embedding-3-large',
+                    'embedding_model' => 'models/gemini-embedding-001',
                     'chunk_size' => 500,
                     'theme' => 'light',
                 ],
@@ -45,7 +45,7 @@ class CompanySeeder extends Seeder
                 'allow_overages' => false,
                 'settings' => [
                     'max_documents' => 50,
-                    'embedding_model' => 'text-embedding-3-small',
+                    'embedding_model' => 'models/gemini-embedding-001',
                     'chunk_size' => 500,
                 ],
             ],
@@ -62,7 +62,7 @@ class CompanySeeder extends Seeder
                 'allow_overages' => true,
                 'settings' => [
                     'max_documents' => -1, // Unlimited
-                    'embedding_model' => 'text-embedding-3-large',
+                    'embedding_model' => 'models/gemini-embedding-001',
                     'chunk_size' => 1000,
                     'custom_features' => [
                         'sso_enabled' => true,
@@ -83,7 +83,7 @@ class CompanySeeder extends Seeder
                 'allow_overages' => false,
                 'settings' => [
                     'max_documents' => 10,
-                    'embedding_model' => 'text-embedding-3-small',
+                    'embedding_model' => 'models/gemini-embedding-001',
                     'chunk_size' => 500,
                 ],
             ],
@@ -98,7 +98,7 @@ class CompanySeeder extends Seeder
                 'allow_overages' => false,
                 'settings' => [
                     'max_documents' => 500,
-                    'embedding_model' => 'text-embedding-3-large',
+                    'embedding_model' => 'models/gemini-embedding-001',
                     'chunk_size' => 500,
                 ],
             ],

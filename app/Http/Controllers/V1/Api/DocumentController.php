@@ -27,7 +27,7 @@ class DocumentController extends Controller
      * - X-Company-Id header (for superadmin impersonation)
      * - User's company_id (for regular users)
      */
-    public function upload(UploadDocumentRequest $request): JsonResponse
+    public function upload(UploadDocumentRequest $request)
     {
         $companyId = $request->attributes->get('current_company_id');
 
@@ -41,7 +41,7 @@ class DocumentController extends Controller
             'language' => $request->input('language', 'en'),
         ];
 
-        $result = $this->documentService->uploadDocument($companyId, $userId, $request->file('file'), $metadata);
+        return $result = $this->documentService->uploadDocument($companyId, $userId, $request->file('file'), $metadata);
 
         // Log admin action
         $this->adminActionRepository->logAction(
