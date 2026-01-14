@@ -4,6 +4,7 @@ use App\Http\Controllers\V1\Api\SuperAdminAuthController;
 use App\Http\Controllers\V1\Api\SuperAdminCompanyController;
 use App\Http\Controllers\V1\Api\SuperAdminImpersonationController;
 use App\Http\Controllers\V1\Api\DocumentController;
+use App\Http\Controllers\V1\Api\ApiKeyController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -90,4 +91,31 @@ Route::prefix('documents')->middleware(['auth:sanctum', 'company.scope'])->group
     
     Route::delete('/{uuid}', [DocumentController::class, 'destroy'])
         ->name('documents.destroy');
+});
+
+// API Key Management routes (requires company context, authentication, and admin role)
+Route::prefix('api-keys')->middleware(['auth:sanctum', 'company.scope', 'company.admin'])->group(function () {
+    // List all API keys for the company
+    Route::get('/', [ApiKeyController::class, 'index'])
+        ->name('api-keys.index');
+    
+    // Create new API key
+    Route::post('/', [ApiKeyController::class, 'store'])
+        ->name('api-keys.store');
+    
+    // Get API key by ID or UUID
+    Route::get('/{apiKey}', [ApiKeyController::class, 'show'])
+        ->name('api-keys.show');
+    
+    // Update API key
+    Route::put('/{apiKey}', [ApiKeyController::class, 'update'])
+        ->name('api-keys.update');
+    
+    // Delete (revoke) API key
+    Route::delete('/{apiKey}', [ApiKeyController::class, 'destroy'])
+        ->name('api-keys.destroy');
+    
+    // Regenerate API key
+    Route::post('/{apiKey}/regenerate', [ApiKeyController::class, 'regenerate'])
+        ->name('api-keys.regenerate');
 });

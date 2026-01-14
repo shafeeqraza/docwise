@@ -39,7 +39,7 @@ class CompanyApiKey extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($model) {
             if (empty($model->uuid)) {
                 $model->uuid = Str::uuid();
@@ -59,12 +59,12 @@ class CompanyApiKey extends Model
     }
 
     // Helper methods
-    public static function generateKey(string $prefix = 'cs_live'): array
+    public static function generateKey(string $prefix = 'pk'): array
     {
         $key = $prefix . '_' . Str::random(32);
         $hash = hash('sha256', $key);
         $keyPrefix = substr($key, 0, 12);
-        
+
         return [
             'key' => $key,
             'hash' => $hash,
@@ -103,7 +103,7 @@ class CompanyApiKey extends Model
         if (!$this->expires_at) {
             return null;
         }
-        
+
         return now()->diffInDays($this->expires_at, false);
     }
 
@@ -131,11 +131,11 @@ class CompanyApiKey extends Model
         if (!$this->permissions) {
             return 'No permissions';
         }
-        
+
         if (in_array('*', $this->permissions)) {
             return 'All permissions';
         }
-        
+
         return implode(', ', $this->permissions);
     }
 }
