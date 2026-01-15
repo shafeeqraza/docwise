@@ -2,67 +2,65 @@
 
 namespace App\Services\V1\Contracts;
 
-use App\Models\Company;
+use App\Http\Resources\ApiKeyResource;
+use App\Http\Resources\PaginatedResourceCollection;
 use App\Models\CompanyApiKey;
-use App\Models\User;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Services\V1\DTOs\CreateApiKeyDTO;
+use App\Services\V1\DTOs\GetApiKeyDTO;
+use App\Services\V1\DTOs\ListApiKeysDTO;
+use App\Services\V1\DTOs\UpdateApiKeyDTO;
 
 interface ApiKeyServiceInterface
 {
     /**
      * Get all API keys for a company.
      *
-     * @param Company $company
-     * @param array $filters
-     * @param int $perPage
-     * @return LengthAwarePaginator
+     * @param ListApiKeysDTO $dto
+     * @return \App\Http\Resources\PaginatedResourceCollection
      */
-    public function getAllForCompany(Company $company, array $filters = [], int $perPage = 15): LengthAwarePaginator;
+    public function getAllForCompany(ListApiKeysDTO $dto): PaginatedResourceCollection;
 
     /**
      * Get API key by ID or UUID.
      *
-     * @param Company $company
-     * @param string|int $identifier
-     * @return CompanyApiKey
+     * @param GetApiKeyDTO $dto
+     * @return ApiKeyResource
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
-    public function getApiKey(Company $company, string|int $identifier): CompanyApiKey;
+    public function getApiKey(GetApiKeyDTO $dto): ApiKeyResource;
 
     /**
      * Create a new API key.
      *
-     * @param Company $company
-     * @param User $user
-     * @param array $data
-     * @return array{apiKey: CompanyApiKey, plainKey: string}
+     * @param CreateApiKeyDTO $dto
+     * @return ApiKeyResource
      */
-    public function createApiKey(Company $company, User $user, array $data): array;
+    public function createApiKey(CreateApiKeyDTO $dto): ApiKeyResource;
 
     /**
      * Update API key.
      *
-     * @param CompanyApiKey $apiKey
-     * @param array $data
-     * @return CompanyApiKey
+     * @param int $apiKeyId
+     * @param UpdateApiKeyDTO $dto
+     * @return ApiKeyResource
      */
-    public function updateApiKey(CompanyApiKey $apiKey, array $data): CompanyApiKey;
+    public function updateApiKey(int $apiKeyId, UpdateApiKeyDTO $dto): ApiKeyResource;
 
     /**
      * Delete (revoke) API key.
      *
-     * @param CompanyApiKey $apiKey
+     * @param int $apiKeyId
      * @return bool
      */
-    public function deleteApiKey(CompanyApiKey $apiKey): bool;
+    public function deleteApiKey(int $apiKeyId): bool;
 
     /**
      * Regenerate API key.
      *
-     * @param CompanyApiKey $apiKey
-     * @return array{apiKey: CompanyApiKey, plainKey: string}
+     * @param int $apiKeyId
+     * @return ApiKeyResource
      */
-    public function regenerateApiKey(CompanyApiKey $apiKey): array;
+    public function regenerateApiKey(int $apiKeyId): ApiKeyResource;
 
     /**
      * Validate API key.

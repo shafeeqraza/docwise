@@ -2,20 +2,44 @@
 
 namespace App\Services\V1\Contracts;
 
-use Illuminate\Http\UploadedFile;
+use App\Http\Resources\DocumentResource;
+use App\Http\Resources\PaginatedResourceCollection;
+use App\Services\V1\DTOs\DeleteDocumentDTO;
+use App\Services\V1\DTOs\GetDocumentDTO;
+use App\Services\V1\DTOs\ListDocumentsDTO;
+use App\Services\V1\DTOs\UploadDocumentDTO;
 
 interface DocumentServiceInterface
 {
-    public function uploadDocument(
-        int $companyId,
-        int $userId,
-        UploadedFile $file,
-        array $metadata = []
-    ): array;
+    /**
+     * Upload a document.
+     *
+     * @param UploadDocumentDTO $dto
+     * @return DocumentResource
+     */
+    public function uploadDocument(UploadDocumentDTO $dto): DocumentResource;
 
-    public function listDocuments(int $companyId, array $filters = []): array;
+    /**
+     * List documents with filters.
+     *
+     * @param ListDocumentsDTO $dto
+     * @return PaginatedResourceCollection
+     */
+    public function listDocuments(ListDocumentsDTO $dto): PaginatedResourceCollection;
 
-    public function getDocument(int $companyId, string $documentUuid): array;
+    /**
+     * Get a single document.
+     *
+     * @param GetDocumentDTO $dto
+     * @return DocumentResource
+     */
+    public function getDocument(GetDocumentDTO $dto): DocumentResource;
 
-    public function deleteDocument(int $companyId, string $documentUuid): bool;
+    /**
+     * Delete a document.
+     *
+     * @param DeleteDocumentDTO $dto
+     * @return bool
+     */
+    public function deleteDocument(DeleteDocumentDTO $dto): bool;
 }

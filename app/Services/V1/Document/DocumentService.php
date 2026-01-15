@@ -7,15 +7,18 @@ use App\Domains\RAG\DTOs\DocumentDTO;
 use App\Domains\RAG\Pipelines\DocumentIngestionPipeline;
 use App\Exceptions\DocumentProcessingException;
 use App\Http\Resources\DocumentResource;
+use App\Http\Resources\PaginatedResourceCollection;
 use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Models\IngestionJob;
 use App\Repositories\V1\DocumentRepository;
-use App\Services\V1\Common\PaginatedResponseFormatter;
+use App\Services\V1\DTOs\DeleteDocumentDTO;
+use App\Services\V1\DTOs\GetDocumentDTO;
+use App\Services\V1\DTOs\ListDocumentsDTO;
+use App\Services\V1\DTOs\UploadDocumentDTO;
 use App\Domains\RAG\Services\DocumentProcessingStatusService;
 use App\Services\V1\Document\Upload\DocumentValidationService;
 use App\Services\V1\Document\Upload\FileStorageService;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
 class DocumentService implements DocumentServiceInterface
@@ -31,43 +34,39 @@ class DocumentService implements DocumentServiceInterface
 
     ) {}
 
-    public function uploadDocument(
-        int $companyId,
-        int $userId,
-        UploadedFile $file,
-        array $metadata = []
-    ): array {
-        return DB::transaction(function () use ($companyId, $userId, $file, $metadata) {
+    public function uploadDocument(UploadDocumentDTO $dto): DocumentResource
+    {
+        return DB::transaction(function () use ($dto) {
             // Calculate checksum from uploaded file (before storage)
-            $checksum = $this->fileStorageService->calculateChecksumFromFile($file);
+            $checksum = $this->fileStorageService->calculateChecksumFromFile($dto->file);
 
             // Check for duplicate before storing
-            // $this->validationService->checkDuplicate($companyId, $checksum);
+            $this->validationService->checkDuplicate($dto->companyId, $checksum);
 
             // Store file only if not a duplicate
-            $storageResult = $this->fileStorageService->storeFile($companyId, $file);
+            $storageResult = $this->fileStorageService->storeFile($dto->companyId, $dto->file);
 
             // Get file metadata
-            $fileMetadata = $this->fileStorageService->getFileMetadata($file);
+            $fileMetadata = $this->fileStorageService->getFileMetadata($dto->file);
 
             // Create document record
             $document = $this->documentRepository->create([
-                'company_id' => $companyId,
-                'title' => $metadata['title'] ?? $fileMetadata['original_filename'],
-                'description' => $metadata['description'] ?? null,
+                'company_id' => $dto->companyId,
+                'title' => $dto->title ?? $fileMetadata['original_filename'],
+                'description' => $dto->description,
                 'source_type' => 'upload',
                 'file_type' => $fileMetadata['extension'],
                 'status' => 'uploaded',
-                'uploaded_by' => $userId,
+                'uploaded_by' => $dto->userId,
                 'public_id' => $storageResult['public_id'],
                 'file_url' => $storageResult['secure_url'],
                 'original_filename' => $fileMetadata['original_filename'],
                 'mime_type' => $fileMetadata['mime_type'],
                 'file_size' => $fileMetadata['file_size'],
                 'checksum' => $checksum,
-                'language' => $metadata['language'] ?? 'en',
-                'tags' => $metadata['tags'] ?? [],
-                'metadata' => $metadata['metadata'] ?? [],
+                'language' => $dto->language,
+                'tags' => $dto->tags,
+                'metadata' => $dto->metadata,
             ]);
 
             // Create initial version
@@ -81,34 +80,40 @@ class DocumentService implements DocumentServiceInterface
             // The ProcessDocumentUploaded listener will queue the ProcessDocument job
             // event(new DocumentUploaded($document, $version, $ingestionJob));
             $chunksWithEmbeddings = $this->processDocument($document->id, $version->id, $ingestionJob->id);
-            return [
-                'document' => $document->load('uploadedBy'),
-                'version' => $version,
-                'ingestion_job' => $ingestionJob,
-                'chunks_with_embeddings' => $chunksWithEmbeddings,
-            ];
+
+            $document->load('uploadedBy');
+
+            return new DocumentResource($document);
         });
     }
 
-    public function listDocuments(int $companyId, array $filters = []): array
+    public function listDocuments(ListDocumentsDTO $dto): PaginatedResourceCollection
     {
-        $perPage = $filters['per_page'] ?? 20;
-        $documents = $this->documentRepository->getByCompany($companyId, $filters, $perPage);
+        $filters = array_filter([
+            'status' => $dto->status,
+            'file_type' => $dto->fileType,
+            'search' => $dto->search,
+        ], fn($value) => $value !== null);
 
-        return PaginatedResponseFormatter::formatWithResource($documents, DocumentResource::class);
+        $documents = $this->documentRepository->getByCompany($dto->companyId, $filters, $dto->perPage);
+
+        return new PaginatedResourceCollection(
+            DocumentResource::collection($documents->items()),
+            $documents
+        );
     }
 
-    public function getDocument(int $companyId, string $documentUuid): array
+    public function getDocument(GetDocumentDTO $dto): DocumentResource
     {
-        $document = $this->documentRepository->findByUuidAndCompanyOrFail($documentUuid, $companyId);
+        $document = $this->documentRepository->findByUuidAndCompanyOrFail($dto->documentUuid, $dto->companyId);
         $document->load(['uploadedBy:id,name,email', 'versions', 'ingestionJobs']);
 
-        return ['data' => new DocumentResource($document)];
+        return new DocumentResource($document);
     }
 
-    public function deleteDocument(int $companyId, string $documentUuid): bool
+    public function deleteDocument(DeleteDocumentDTO $dto): bool
     {
-        $document = $this->documentRepository->findByUuidAndCompanyOrFail($documentUuid, $companyId);
+        $document = $this->documentRepository->findByUuidAndCompanyOrFail($dto->documentUuid, $dto->companyId);
 
         // Delete file from Cloudinary
         if ($document->public_id) {
@@ -127,7 +132,6 @@ class DocumentService implements DocumentServiceInterface
     }
 
     public function processDocument(int $documentId, int $versionId, int $ingestionJobId)
-
     {
         $document = Document::findOrFail($documentId);
         $version = DocumentVersion::findOrFail($versionId);

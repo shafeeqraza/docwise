@@ -2,67 +2,69 @@
 
 namespace App\Services\V1\Contracts;
 
-use App\Models\Company;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Http\Resources\CompanyResource;
+use App\Services\V1\DTOs\CreateCompanyDTO;
+use App\Services\V1\DTOs\GetCompanyDTO;
+use App\Services\V1\DTOs\ListCompaniesDTO;
+use App\Services\V1\DTOs\UpdateCompanyDTO;
 
 interface SuperAdminCompanyServiceInterface
 {
     /**
      * Get all companies with pagination.
      *
-     * @param array $filters
-     * @param int $perPage
-     * @return LengthAwarePaginator
+     * @param ListCompaniesDTO $dto
+     * @return \App\Http\Resources\PaginatedResourceCollection
      */
-    public function getAllCompanies(array $filters = [], int $perPage = 15): LengthAwarePaginator;
+    public function getAllCompanies(ListCompaniesDTO $dto): \App\Http\Resources\PaginatedResourceCollection;
 
     /**
      * Get company by ID or UUID.
      *
-     * @param string|int $identifier
-     * @return Company
+     * @param GetCompanyDTO $dto
+     * @return CompanyResource
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
-    public function getCompany(string|int $identifier): Company;
+    public function getCompany(GetCompanyDTO $dto): CompanyResource;
 
     /**
      * Create a new company.
      *
-     * @param array $data
-     * @return Company
+     * @param CreateCompanyDTO $dto
+     * @return CompanyResource
      */
-    public function createCompany(array $data): Company;
+    public function createCompany(CreateCompanyDTO $dto): CompanyResource;
 
     /**
      * Update company.
      *
-     * @param Company $company
-     * @param array $data
-     * @return Company
+     * @param int $companyId
+     * @param UpdateCompanyDTO $dto
+     * @return CompanyResource
      */
-    public function updateCompany(Company $company, array $data): Company;
+    public function updateCompany(int $companyId, UpdateCompanyDTO $dto): CompanyResource;
 
     /**
      * Soft delete company.
      *
-     * @param Company $company
+     * @param int $companyId
      * @return bool
      */
-    public function deleteCompany(Company $company): bool;
+    public function deleteCompany(int $companyId): bool;
 
     /**
      * Suspend company.
      *
-     * @param Company $company
-     * @return Company
+     * @param int $companyId
+     * @return CompanyResource
      */
-    public function suspendCompany(Company $company): Company;
+    public function suspendCompany(int $companyId): CompanyResource;
 
     /**
      * Activate company.
      *
-     * @param Company $company
-     * @return Company
+     * @param int $companyId
+     * @return CompanyResource
      */
-    public function activateCompany(Company $company): Company;
+    public function activateCompany(int $companyId): CompanyResource;
 }

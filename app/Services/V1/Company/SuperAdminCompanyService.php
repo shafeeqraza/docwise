@@ -3,10 +3,14 @@
 namespace App\Services\V1\Company;
 
 use App\Services\V1\Contracts\SuperAdminCompanyServiceInterface;
-use App\Models\Company;
+use App\Http\Resources\CompanyResource;
+use App\Http\Resources\PaginatedResourceCollection;
 use App\Repositories\V1\Contracts\AdminActionRepositoryInterface;
 use App\Repositories\V1\Contracts\CompanyRepositoryInterface;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Services\V1\DTOs\CreateCompanyDTO;
+use App\Services\V1\DTOs\GetCompanyDTO;
+use App\Services\V1\DTOs\ListCompaniesDTO;
+use App\Services\V1\DTOs\UpdateCompanyDTO;
 use Illuminate\Support\Str;
 
 class SuperAdminCompanyService implements SuperAdminCompanyServiceInterface
@@ -25,118 +29,165 @@ class SuperAdminCompanyService implements SuperAdminCompanyServiceInterface
     /**
      * Get all companies with pagination.
      *
-     * @param array $filters
-     * @param int $perPage
-     * @return LengthAwarePaginator
+     * @param ListCompaniesDTO $dto
+     * @return \App\Http\Resources\PaginatedResourceCollection
      */
-    public function getAllCompanies(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    public function getAllCompanies(ListCompaniesDTO $dto): PaginatedResourceCollection
     {
-        return $this->companyRepository->getAll($filters, $perPage);
+        $filters = array_filter([
+            'status' => $dto->status,
+            'subscription_plan' => $dto->subscriptionPlan,
+            'payment_status' => $dto->paymentStatus,
+            'search' => $dto->search,
+        ], fn($value) => $value !== null);
+
+        $companies = $this->companyRepository->getAll($filters, $dto->perPage);
+
+        return new PaginatedResourceCollection(
+            CompanyResource::collection($companies->items()),
+            $companies
+        );
     }
 
     /**
      * Get company by ID or UUID.
      *
-     * @param string|int $identifier
-     * @return Company
+     * @param GetCompanyDTO $dto
+     * @return CompanyResource
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
-    public function getCompany(string|int $identifier): Company
+    public function getCompany(GetCompanyDTO $dto): CompanyResource
     {
-        if (is_numeric($identifier)) {
-            $company = $this->companyRepository->findById((int) $identifier);
+        if (is_numeric($dto->identifier)) {
+            $company = $this->companyRepository->findById((int) $dto->identifier);
         } else {
-            $company = $this->companyRepository->findByUuid($identifier);
+            $company = $this->companyRepository->findByUuid($dto->identifier);
         }
 
         if (!$company) {
             throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Company not found');
         }
 
-        return $company;
+        return new CompanyResource($company);
     }
 
     /**
      * Create a new company.
      *
-     * @param array $data
-     * @return Company
+     * @param CreateCompanyDTO $dto
+     * @return CompanyResource
      */
-    public function createCompany(array $data): Company
+    public function createCompany(CreateCompanyDTO $dto): CompanyResource
     {
-        // Ensure slug is generated if not provided
-        if (empty($data['slug']) && !empty($data['name'])) {
-            $data['slug'] = Str::slug($data['name']);
-        }
+        $slug = $dto->slug ?? Str::slug($dto->name);
 
-        // Set default values if not provided
-        $data['status'] = $data['status'] ?? 'active';
-        $data['subscription_plan'] = $data['subscription_plan'] ?? 'basic';
-        $data['billing_cycle'] = $data['billing_cycle'] ?? 'monthly';
-        $data['payment_status'] = $data['payment_status'] ?? 'active';
-        $data['allow_overages'] = $data['allow_overages'] ?? false;
+        $data = [
+            'name' => $dto->name,
+            'slug' => $slug,
+            'email' => $dto->email,
+            'phone' => $dto->phone,
+            'status' => $dto->status,
+            'subscription_plan' => $dto->subscriptionPlan,
+            'billing_cycle' => $dto->billingCycle,
+            'payment_status' => $dto->paymentStatus,
+            'allow_overages' => $dto->allowOverages,
+            'settings' => $dto->settings,
+        ];
 
-        return $this->companyRepository->create($data);
+        $company = $this->companyRepository->create($data);
+
+        return new CompanyResource($company);
     }
 
     /**
      * Update company.
      *
-     * @param Company $company
-     * @param array $data
-     * @return Company
+     * @param int $companyId
+     * @param UpdateCompanyDTO $dto
+     * @return CompanyResource
      */
-    public function updateCompany(Company $company, array $data): Company
+    public function updateCompany(int $companyId, UpdateCompanyDTO $dto): CompanyResource
     {
-        // Update slug if name is being changed
-        if (isset($data['name']) && $data['name'] !== $company->name) {
-            if (empty($data['slug'])) {
-                $data['slug'] = Str::slug($data['name']);
-            }
+        $company = $this->companyRepository->findById($companyId);
+        if (!$company) {
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Company not found');
         }
 
-        $this->companyRepository->update($company, $data);
+        $updateData = array_filter([
+            'name' => $dto->name,
+            'slug' => $dto->slug ?? ($dto->name ? Str::slug($dto->name) : null),
+            'email' => $dto->email,
+            'phone' => $dto->phone,
+            'status' => $dto->status,
+            'subscription_plan' => $dto->subscriptionPlan,
+            'billing_cycle' => $dto->billingCycle,
+            'payment_status' => $dto->paymentStatus,
+            'allow_overages' => $dto->allowOverages,
+            'settings' => $dto->settings,
+        ], fn($value) => $value !== null);
+
+        // Update slug if name is being changed
+        if (isset($updateData['name']) && $updateData['name'] !== $company->name && !isset($updateData['slug'])) {
+            $updateData['slug'] = Str::slug($updateData['name']);
+        }
+
+        $this->companyRepository->update($company, $updateData);
         $company->refresh();
 
-        return $company;
+        return new CompanyResource($company);
     }
 
     /**
      * Soft delete company.
      *
-     * @param Company $company
+     * @param int $companyId
      * @return bool
      */
-    public function deleteCompany(Company $company): bool
+    public function deleteCompany(int $companyId): bool
     {
+        $company = $this->companyRepository->findById($companyId);
+        if (!$company) {
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Company not found');
+        }
+
         return $this->companyRepository->delete($company);
     }
 
     /**
      * Suspend company.
      *
-     * @param Company $company
-     * @return Company
+     * @param int $companyId
+     * @return CompanyResource
      */
-    public function suspendCompany(Company $company): Company
+    public function suspendCompany(int $companyId): CompanyResource
     {
+        $company = $this->companyRepository->findById($companyId);
+        if (!$company) {
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Company not found');
+        }
+
         $this->companyRepository->updateStatus($company, 'suspended');
         $company->refresh();
 
-        return $company;
+        return new CompanyResource($company);
     }
 
     /**
      * Activate company.
      *
-     * @param Company $company
-     * @return Company
+     * @param int $companyId
+     * @return CompanyResource
      */
-    public function activateCompany(Company $company): Company
+    public function activateCompany(int $companyId): CompanyResource
     {
+        $company = $this->companyRepository->findById($companyId);
+        if (!$company) {
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Company not found');
+        }
+
         $this->companyRepository->updateStatus($company, 'active');
         $company->refresh();
 
-        return $company;
+        return new CompanyResource($company);
     }
 }

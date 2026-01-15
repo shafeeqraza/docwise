@@ -8,6 +8,19 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class ApiKeyResource extends JsonResource
 {
+    public ?string $plainKey = null;
+
+    /**
+     * Create a new resource instance.
+     *
+     * @param mixed $resource
+     * @param string|null $plainKey
+     */
+    public function __construct($resource, ?string $plainKey = null)
+    {
+        parent::__construct($resource);
+        $this->plainKey = $plainKey;
+    }
     /**
      * Transform the resource into an array.
      *
@@ -25,6 +38,7 @@ class ApiKeyResource extends JsonResource
             'name' => $this->name,
             'key_prefix' => $this->key_prefix,
             'masked_key' => $this->getMaskedKey(),
+            'key' => $this->when(!is_null($this->plainKey), $this->plainKey),
             'permissions' => $this->permissions,
             'rate_limit_per_minute' => $this->rate_limit_per_minute,
             'rate_limit_per_hour' => $this->rate_limit_per_hour,
