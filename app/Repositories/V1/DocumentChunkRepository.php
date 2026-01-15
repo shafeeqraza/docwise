@@ -3,6 +3,7 @@
 namespace App\Repositories\V1;
 
 use App\Models\DocumentChunk;
+use App\Repositories\V1\Contracts\DocumentChunkRepositoryInterface;
 
 class DocumentChunkRepository implements DocumentChunkRepositoryInterface
 {

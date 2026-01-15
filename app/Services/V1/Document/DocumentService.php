@@ -2,7 +2,7 @@
 
 namespace App\Services\V1\Document;
 
-use App\Contracts\V1\DocumentServiceInterface;
+use App\Services\V1\Contracts\DocumentServiceInterface;
 use App\Domains\RAG\DTOs\DocumentDTO;
 use App\Domains\RAG\Pipelines\DocumentIngestionPipeline;
 use App\Exceptions\DocumentProcessingException;

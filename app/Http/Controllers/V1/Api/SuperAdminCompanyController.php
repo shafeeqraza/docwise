@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\V1\Api;
 
-use App\Contracts\V1\SuperAdminCompanyServiceInterface;
+use App\Services\V1\Contracts\SuperAdminCompanyServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\V1\Concerns\ResponseHandler;
 use App\Http\Requests\CreateCompanyRequest;
 use App\Http\Requests\UpdateCompanyRequest;
 use App\Http\Resources\CompanyResource;
 use App\Models\Company;
-use App\Repositories\V1\AdminActionRepositoryInterface;
+use App\Repositories\V1\Contracts\AdminActionRepositoryInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;

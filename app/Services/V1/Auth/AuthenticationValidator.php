@@ -4,7 +4,7 @@ namespace App\Services\V1\Auth;
 
 use App\Exceptions\AuthenticationException;
 use App\Models\User;
-use App\Repositories\V1\UserRepositoryInterface;
+use App\Repositories\V1\Contracts\UserRepositoryInterface;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 

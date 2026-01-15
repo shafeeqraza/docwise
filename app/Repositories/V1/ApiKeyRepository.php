@@ -3,6 +3,7 @@
 namespace App\Repositories\V1;
 
 use App\Models\CompanyApiKey;
+use App\Repositories\V1\Contracts\ApiKeyRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 

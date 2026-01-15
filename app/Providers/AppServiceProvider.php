@@ -2,15 +2,15 @@
 
 namespace App\Providers;
 
-use App\Contracts\V1\SuperAdminLoginServiceInterface;
-use App\Contracts\V1\SuperAdminLogOutServiceInterface;
-use App\Contracts\V1\SuperAdminCompanyServiceInterface;
-use App\Contracts\V1\DocumentServiceInterface;
-use App\Contracts\V1\ApiKeyServiceInterface;
-use App\Repositories\V1\AdminActionRepositoryInterface;
-use App\Repositories\V1\UserRepositoryInterface;
-use App\Repositories\V1\CompanyRepositoryInterface;
-use App\Repositories\V1\ApiKeyRepositoryInterface;
+use App\Services\V1\Contracts\SuperAdminLoginServiceInterface;
+use App\Services\V1\Contracts\SuperAdminLogOutServiceInterface;
+use App\Services\V1\Contracts\SuperAdminCompanyServiceInterface;
+use App\Services\V1\Contracts\DocumentServiceInterface;
+use App\Services\V1\Contracts\ApiKeyServiceInterface;
+use App\Repositories\V1\Contracts\AdminActionRepositoryInterface;
+use App\Repositories\V1\Contracts\UserRepositoryInterface;
+use App\Repositories\V1\Contracts\CompanyRepositoryInterface;
+use App\Repositories\V1\Contracts\ApiKeyRepositoryInterface;
 use App\Repositories\V1\AdminActionRepository;
 use App\Repositories\V1\UserRepository;
 use App\Repositories\V1\CompanyRepository;
@@ -27,7 +27,7 @@ use App\Domains\RAG\Factories\EmbeddingProviderFactory;
 use App\Domains\RAG\Factories\TokenizerFactory;
 use App\Domains\RAG\VectorStores\Qdrant\QdrantVectorStore;
 use App\Repositories\V1\DocumentChunkRepository;
-use App\Repositories\V1\DocumentChunkRepositoryInterface;
+use App\Repositories\V1\Contracts\DocumentChunkRepositoryInterface;
 use App\Services\V1\Company\SuperAdminCompanyService;
 use App\Services\V1\Company\ApiKeyService;
 use App\Services\V1\Document\DocumentService;

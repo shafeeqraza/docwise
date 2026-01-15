@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\V1\Api;
 
-use App\Contracts\V1\ApiKeyServiceInterface;
+use App\Services\V1\Contracts\ApiKeyServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\V1\Concerns\ResponseHandler;
 use App\Http\Requests\CreateApiKeyRequest;

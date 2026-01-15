@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\V1\Api;
 
-use App\Contracts\V1\DocumentServiceInterface;
+use App\Services\V1\Contracts\DocumentServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\V1\Concerns\ResponseHandler;
 use App\Http\Requests\ListDocumentsRequest;
 use App\Http\Requests\UploadDocumentRequest;
-use App\Repositories\V1\AdminActionRepositoryInterface;
+use App\Repositories\V1\Contracts\AdminActionRepositoryInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

@@ -2,7 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Contracts\V1\ApiKeyServiceInterface;
+use App\Services\V1\Contracts\ApiKeyServiceInterface;
 use App\Exceptions\AuthenticationException;
 use App\Services\V1\Company\ApiKeyUsageService;
 use Closure;

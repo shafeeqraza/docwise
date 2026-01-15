@@ -4,6 +4,7 @@ namespace App\Repositories\V1;
 
 use App\Models\AdminAction;
 use App\Models\User;
+use App\Repositories\V1\Contracts\AdminActionRepositoryInterface;
 use Illuminate\Http\Request;
 
 class AdminActionRepository implements AdminActionRepositoryInterface

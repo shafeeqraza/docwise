@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Repositories\V1;
+namespace App\Repositories\V1\Contracts;
 
 use App\Models\CompanyApiKey;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;

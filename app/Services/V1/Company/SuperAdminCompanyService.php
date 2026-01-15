@@ -2,10 +2,10 @@
 
 namespace App\Services\V1\Company;
 
-use App\Contracts\V1\SuperAdminCompanyServiceInterface;
+use App\Services\V1\Contracts\SuperAdminCompanyServiceInterface;
 use App\Models\Company;
-use App\Repositories\V1\AdminActionRepositoryInterface;
-use App\Repositories\V1\CompanyRepositoryInterface;
+use App\Repositories\V1\Contracts\AdminActionRepositoryInterface;
+use App\Repositories\V1\Contracts\CompanyRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 

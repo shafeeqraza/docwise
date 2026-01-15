@@ -2,11 +2,11 @@
 
 namespace App\Services\V1\Company;
 
-use App\Contracts\V1\ApiKeyServiceInterface;
+use App\Services\V1\Contracts\ApiKeyServiceInterface;
 use App\Models\Company;
 use App\Models\CompanyApiKey;
 use App\Models\User;
-use App\Repositories\V1\ApiKeyRepositoryInterface;
+use App\Repositories\V1\Contracts\ApiKeyRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class ApiKeyService implements ApiKeyServiceInterface

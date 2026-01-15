@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Contracts\V1\Document;
+namespace App\Services\V1\Contracts\Document;
 
 interface EmbeddingProviderInterface
 {
