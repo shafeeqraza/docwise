@@ -4,7 +4,6 @@ namespace App\Observers;
 
 use App\Events\DocumentUploaded;
 use App\Models\Document;
-use Illuminate\Support\Facades\Log;
 
 class DocumentObserver
 {

@@ -6,7 +6,6 @@ use App\Events\DocumentUploaded;
 use App\Jobs\ProcessDocument;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 

@@ -8,7 +8,7 @@ use App\Domains\RAG\DTOs\EmbeddingDTO;
 use App\Domains\RAG\Exceptions\QdrantException as RAGQdrantException;
 use App\Exceptions\QdrantException;
 use App\Models\DocumentChunk;
-use Illuminate\Support\Facades\Log;
+use App\Services\V1\Common\LogService;
 
 /**
  * Service for storing and retrieving vectors.
@@ -19,7 +19,8 @@ use Illuminate\Support\Facades\Log;
 class VectorStoreService
 {
     public function __construct(
-        private VectorStore $vectorStore
+        private VectorStore $vectorStore,
+        private LogService $logService
     ) {}
 
     /**
@@ -79,7 +80,7 @@ class VectorStoreService
         } catch (RAGQdrantException $e) {
             throw new QdrantException($e->getMessage(), $e->getCode(), $e);
         } catch (\Exception $e) {
-            Log::error('Vector store upsert failed', [
+            $this->logService->error('Vector store upsert failed', [
                 'error' => $e->getMessage(),
             ]);
             throw new QdrantException(
@@ -101,7 +102,7 @@ class VectorStoreService
         try {
             return $this->vectorStore->deleteByDocument($documentId);
         } catch (\Exception $e) {
-            Log::error('Vector store delete failed', [
+            $this->logService->error('Vector store delete failed', [
                 'document_id' => $documentId,
                 'error' => $e->getMessage(),
             ]);
@@ -128,7 +129,7 @@ class VectorStoreService
                 try {
                     $embeddingDTO = new EmbeddingDTO($vector, $model, $dimension);
                 } catch (\InvalidArgumentException $e) {
-                    Log::warning('Failed to create EmbeddingDTO from chunk metadata', [
+                    $this->logService->warning('Failed to create EmbeddingDTO from chunk metadata', [
                         'chunk_id' => $chunk->id,
                         'error' => $e->getMessage(),
                     ]);

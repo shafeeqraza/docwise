@@ -15,7 +15,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
+use App\Services\V1\Common\LogService;
 
 class ProcessDocument implements ShouldQueue
 {
@@ -32,7 +32,8 @@ class ProcessDocument implements ShouldQueue
 
     public function handle(
         DocumentIngestionPipeline $pipeline,
-        DocumentProcessingStatusService $statusService
+        DocumentProcessingStatusService $statusService,
+        LogService $logService
     ): void {
         $document = Document::findOrFail($this->documentId);
         $version = DocumentVersion::findOrFail($this->versionId);
@@ -77,7 +78,7 @@ class ProcessDocument implements ShouldQueue
             // Mark as completed
             $statusService->markAsCompleted($document, $version, $ingestionJob);
         } catch (\Exception $e) {
-            $this->handleFailure($document, $version, $ingestionJob, $e, $statusService);
+            $this->handleFailure($document, $version, $ingestionJob, $e, $statusService, $logService);
             throw $e;
         }
     }
@@ -90,9 +91,10 @@ class ProcessDocument implements ShouldQueue
         DocumentVersion $version,
         IngestionJob $ingestionJob,
         \Exception $exception,
-        DocumentProcessingStatusService $statusService
+        DocumentProcessingStatusService $statusService,
+        LogService $logService
     ): void {
-        Log::error('Document processing failed', [
+        $logService->error('Document processing failed', [
             'document_id' => $document->id,
             'version_id' => $version->id,
             'ingestion_job_id' => $ingestionJob->id,

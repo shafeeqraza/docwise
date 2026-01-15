@@ -6,6 +6,7 @@ use App\Domains\RAG\Contracts\EmbeddingProvider;
 use App\Domains\RAG\DTOs\EmbeddingDTO;
 use App\Domains\RAG\Embeddings\Concerns\RetriesEmbeddingRequests;
 use App\Domains\RAG\Exceptions\EmbeddingFailedException;
+use App\Services\V1\Common\LogService;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -30,7 +31,7 @@ class GeminiEmbeddingProvider implements EmbeddingProvider
     protected int $batchSize;
     protected int $maxRetries;
 
-    public function __construct()
+    public function __construct(?LogService $logService = null)
     {
         $this->apiKey = config('services.gemini.api_key');
         if (!$this->apiKey) {
@@ -40,6 +41,9 @@ class GeminiEmbeddingProvider implements EmbeddingProvider
         $this->timeout = config('services.gemini.timeout', 60);
         $this->batchSize = config('services.gemini.batch_size', self::DEFAULT_BATCH_SIZE);
         $this->maxRetries = config('services.gemini.max_retries', self::DEFAULT_RETRIES);
+        
+        // Set log service for trait
+        $this->logService = $logService ?? app(LogService::class);
     }
 
     /**
