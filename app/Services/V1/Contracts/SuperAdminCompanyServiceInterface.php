@@ -3,6 +3,7 @@
 namespace App\Services\V1\Contracts;
 
 use App\Http\Resources\CompanyResource;
+use App\Http\Resources\PaginatedResourceCollection;
 use App\Services\V1\DTOs\CreateCompanyDTO;
 use App\Services\V1\DTOs\GetCompanyDTO;
 use App\Services\V1\DTOs\ListCompaniesDTO;
@@ -16,7 +17,7 @@ interface SuperAdminCompanyServiceInterface
      * @param ListCompaniesDTO $dto
      * @return \App\Http\Resources\PaginatedResourceCollection
      */
-    public function getAllCompanies(ListCompaniesDTO $dto): \App\Http\Resources\PaginatedResourceCollection;
+    public function getAllCompanies(ListCompaniesDTO $dto): PaginatedResourceCollection;
 
     /**
      * Get company by ID or UUID.
