@@ -21,7 +21,8 @@ return new class extends Migration
             $table->enum('file_type', ['pdf', 'docx', 'txt', 'html', 'md']);
             $table->enum('status', ['uploaded', 'processing', 'completed', 'failed', 'archived'])->default('uploaded');
             $table->foreignId('uploaded_by')->constrained('users')->restrictOnDelete();
-            $table->string('storage_path', 1000);
+            $table->string('public_id', 1000);
+            $table->string('file_url', 2000)->nullable();
             $table->string('original_filename', 500)->nullable();
             $table->string('mime_type', 100)->nullable();
             $table->unsignedBigInteger('file_size')->nullable();

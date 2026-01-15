@@ -29,6 +29,7 @@ return new class extends Migration
             $table->timestamp('completed_at')->nullable();
             $table->timestamp('failed_at')->nullable();
             $table->timestamps();
+            $table->softDeletes();
 
             $table->index(['company_id']);
             $table->index(['status']);

@@ -35,4 +35,24 @@ return [
         ],
     ],
 
+    'cloudinary' => [
+        'cloud_name' => env('CLOUDINARY_CLOUD_NAME'),
+        'api_key' => env('CLOUDINARY_API_KEY'),
+        'api_secret' => env('CLOUDINARY_API_SECRET'),
+        'secure' => env('CLOUDINARY_SECURE', true),
+    ],
+
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'organization' => env('OPENAI_ORGANIZATION'),
+        'project' => env('OPENAI_PROJECT'),
+        'timeout' => env('OPENAI_TIMEOUT', 60),
+    ],
+
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'timeout' => env('GEMINI_TIMEOUT', 60),
+    ],
+
+    'pdf_to_text_path' => env('PDF_TO_TEXT_PATH'),
 ];
