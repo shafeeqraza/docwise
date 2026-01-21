@@ -10,17 +10,11 @@ use Illuminate\Http\Client\RequestException;
  * Trait for retrying vector store operations with exponential backoff.
  *
  * Follows DRY principle: Shared retry logic reusable across vector store implementations.
+ * 
+ * Note: Classes using this trait must have a $logService property (injected via constructor).
  */
 trait RetriesVectorStoreOperations
 {
-    /**
-     * Log service instance.
-     * Classes using this trait should inject LogService via constructor.
-     *
-     * @var LogService|null
-     */
-    protected ?LogService $logService = null;
-
     /**
      * Retry a callable operation with exponential backoff.
      *
