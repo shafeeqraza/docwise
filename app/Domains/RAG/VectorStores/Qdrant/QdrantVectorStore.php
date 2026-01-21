@@ -5,6 +5,7 @@ namespace App\Domains\RAG\VectorStores\Qdrant;
 use App\Domains\RAG\Contracts\VectorStore;
 use App\Domains\RAG\DTOs\ChunkDTO;
 use App\Domains\RAG\Exceptions\QdrantException;
+use App\Domains\RAG\VectorStores\Concerns\RetriesVectorStoreOperations;
 use App\Services\V1\Common\LogService;
 use Illuminate\Support\Facades\Http;
 
@@ -16,8 +17,11 @@ use Illuminate\Support\Facades\Http;
  */
 class QdrantVectorStore implements VectorStore
 {
+    use RetriesVectorStoreOperations;
+
     private const DEFAULT_VECTOR_DIMENSION = 1536;
     private const DOCUMENT_COLLECTION_NAME = 'documents';
+    private const MAX_RETRIES = 3;
 
     /**
      * Create a new Qdrant vector store instance.
@@ -100,6 +104,27 @@ class QdrantVectorStore implements VectorStore
         $this->ensureCollection($vectorDimension);
 
         $collectionName = $this->getCollectionName();
+
+        return $this->retryWithBackoff(
+            function () use ($chunks, $collectionName) {
+                return $this->performUpsert($chunks, $collectionName);
+            },
+            'Qdrant upsert',
+            self::MAX_RETRIES,
+            ['collection' => $collectionName, 'count' => count($chunks)]
+        );
+    }
+
+    /**
+     * Perform the actual upsert operation.
+     *
+     * @param array<ChunkDTO> $chunks Array of chunks with embeddings
+     * @param string $collectionName The collection name
+     * @return array<ChunkDTO> Array of chunks
+     * @throws QdrantException If upsert operation fails
+     */
+    private function performUpsert(array $chunks, string $collectionName): array
+    {
         $apiKey = config('qdrant.api_key');
 
         // Prepare points for batch upsert
@@ -131,31 +156,23 @@ class QdrantVectorStore implements VectorStore
             return $chunks;
         }
 
-        try {
-            $url = $this->buildQdrantUrl("/collections/{$collectionName}/points");
-            $headers = $apiKey ? ['api-key' => $apiKey] : [];
+        $url = $this->buildQdrantUrl("/collections/{$collectionName}/points");
+        $headers = $apiKey ? ['api-key' => $apiKey] : [];
 
-            $response = Http::withHeaders($headers)->put($url, [
-                'points' => $points,
-            ]);
+        $response = Http::withHeaders($headers)->put($url, [
+            'points' => $points,
+        ]);
 
-            if (!$response->successful()) {
-                throw new QdrantException('Failed to upsert points to Qdrant: ' . $response->body());
-            }
-
-            $this->logService->info('Upserted chunks to Qdrant', [
-                'collection' => $collectionName,
-                'count' => count($points),
-            ]);
-
-            return $chunks;
-        } catch (\Exception $e) {
-            $this->logService->error('Qdrant upsert failed', [
-                'collection' => $collectionName,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
+        if (!$response->successful()) {
+            throw new QdrantException('Failed to upsert points to Qdrant: ' . $response->body());
         }
+
+        $this->logService->info('Upserted chunks to Qdrant', [
+            'collection' => $collectionName,
+            'count' => count($points),
+        ]);
+
+        return $chunks;
     }
 
     /**
@@ -170,68 +187,82 @@ class QdrantVectorStore implements VectorStore
     public function search(array $queryVector, int $limit = 10, array $filters = []): array
     {
         $collectionName = $this->getCollectionName();
+
+        return $this->retryWithBackoff(
+            function () use ($queryVector, $limit, $filters, $collectionName) {
+                return $this->performSearch($queryVector, $limit, $filters, $collectionName);
+            },
+            'Qdrant search',
+            self::MAX_RETRIES,
+            ['collection' => $collectionName, 'limit' => $limit]
+        );
+    }
+
+    /**
+     * Perform the actual search operation.
+     *
+     * @param array<int> $queryVector The query vector
+     * @param int $limit Maximum number of results to return
+     * @param array<string, mixed> $filters Optional filters
+     * @param string $collectionName The collection name
+     * @return array<ChunkDTO> Array of matching chunks
+     * @throws QdrantException If search operation fails
+     */
+    private function performSearch(array $queryVector, int $limit, array $filters, string $collectionName): array
+    {
         $apiKey = config('qdrant.api_key');
+        $url = $this->buildQdrantUrl("/collections/{$collectionName}/points/search");
+        $headers = $apiKey ? ['api-key' => $apiKey] : [];
 
-        try {
-            $url = $this->buildQdrantUrl("/collections/{$collectionName}/points/search");
-            $headers = $apiKey ? ['api-key' => $apiKey] : [];
+        $payload = [
+            'vector' => $queryVector,
+            'limit' => $limit,
+            'with_payload' => true,
+        ];
 
-            $payload = [
-                'vector' => $queryVector,
-                'limit' => $limit,
-                'with_payload' => true,
-            ];
-
-            // Add filters if provided
-            if (!empty($filters)) {
-                $must = [];
-                foreach ($filters as $key => $value) {
-                    $must[] = [
-                        'key' => $key,
-                        'match' => ['value' => $value],
-                    ];
-                }
-                $payload['filter'] = ['must' => $must];
+        // Add filters if provided
+        if (!empty($filters)) {
+            $must = [];
+            foreach ($filters as $key => $value) {
+                $must[] = [
+                    'key' => $key,
+                    'match' => ['value' => $value],
+                ];
             }
-
-            $response = Http::withHeaders($headers)->post($url, $payload);
-
-            if (!$response->successful()) {
-                throw new QdrantException('Failed to search Qdrant: ' . $response->body());
-            }
-
-            $results = $response->json();
-            $chunks = [];
-
-            foreach ($results['result'] ?? [] as $point) {
-                $payload = $point['payload'] ?? [];
-                $score = $point['score'] ?? 0.0;
-
-                // Add similarity score to metadata
-                $metadata = $payload;
-                $metadata['similarity_score'] = $score;
-
-                $chunks[] = new ChunkDTO(
-                    content: $payload['content'] ?? '',
-                    index: $payload['chunk_index'] ?? 0,
-                    metadata: $metadata,
-                    tokens: $payload['token_count'] ?? null,
-                    embedding: null, // Not returned in search results
-                    id: $payload['chunk_id'] ?? null,
-                    documentId: $payload['document_id'] ?? null,
-                    versionId: $payload['version_id'] ?? null,
-                    companyId: $payload['company_id'] ?? null
-                );
-            }
-
-            return $chunks;
-        } catch (\Exception $e) {
-            $this->logService->error('Qdrant search failed', [
-                'collection' => $collectionName,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
+            $payload['filter'] = ['must' => $must];
         }
+
+        $response = Http::withHeaders($headers)->post($url, $payload);
+
+        if (!$response->successful()) {
+            throw new QdrantException('Failed to search Qdrant: ' . $response->body());
+        }
+
+        $results = $response->json();
+        $chunks = [];
+
+        foreach ($results['result'] ?? [] as $point) {
+            $payload = $point['payload'] ?? [];
+            $score = $point['score'] ?? 0.0;
+
+            // Add similarity score to metadata
+            $metadata = $payload;
+            $metadata['similarity_score'] = $score;
+
+            $chunks[] = new ChunkDTO(
+                content: $payload['content'] ?? '',
+                index: $payload['chunk_index'] ?? 0,
+                metadata: $metadata,
+                tokens: $payload['token_count'] ?? null,
+                embedding: null, // Not returned in search results
+                id: $payload['chunk_id'] ?? null,
+                documentId: $payload['document_id'] ?? null,
+                versionId: $payload['version_id'] ?? null,
+                companyId: $payload['company_id'] ?? null
+            );
+        }
+
+        return $chunks;
     }
 
     /**

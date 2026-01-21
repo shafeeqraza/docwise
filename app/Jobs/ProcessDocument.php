@@ -58,6 +58,18 @@ class ProcessDocument implements ShouldQueue
                 'document_id' => $this->document->id,
                 'version_id' => $this->version->id,
                 'company_id' => $this->document->company_id,
+                'on_progress' => function (int $percentage, string $status, int $currentStep, int $totalSteps) {
+                    // Update ingestion job with progress
+                    $this->ingestionJob->update([
+                        'progress_data' => [
+                            'percentage' => $percentage,
+                            'status' => $status,
+                            'current_step' => $currentStep,
+                            'total_steps' => $totalSteps,
+                            'updated_at' => now()->toIso8601String(),
+                        ],
+                    ]);
+                },
                 'on_complete' => function (int $chunkCount, ?string $model) use ($embeddingModel) {
                     // Update version with chunk count and embedding model
                     $this->version->update([

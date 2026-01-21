@@ -48,50 +48,75 @@ class DocumentIngestionPipeline
      */
     public function process(DocumentDTO $document, array $options = []): array
     {
+        $totalSteps = 8;
+        $currentStep = 0;
+
         // Step 1: Load document text
+        $this->updateProgress($options, ++$currentStep, $totalSteps, 'Loading document');
         $text = $this->loadDocument($document);
 
         // Step 2: Chunk text using TextChunkingService (returns ChunkDTOs without IDs)
+        $this->updateProgress($options, ++$currentStep, $totalSteps, 'Chunking text');
         $chunkDTOs = $this->chunkingService->chunkText($text, $document, $options);
 
         // Step 3: Persist chunks to MySQL and update DTOs with IDs and UUIDs
+        $this->updateProgress($options, ++$currentStep, $totalSteps, 'Persisting chunks');
         $chunkDTOs = $this->persistChunksAndUpdateDTOs($chunkDTOs, $options);
 
         // Step 4: Validate token limit before generating embeddings
+        $this->updateProgress($options, ++$currentStep, $totalSteps, 'Validating token limits');
         $companyId = $options['company_id'] ?? null;
         if ($companyId) {
             $this->tokenLimitValidator->validate($companyId, $chunkDTOs);
         }
 
         // Step 5: Generate embeddings for chunks
+        $this->updateProgress($options, ++$currentStep, $totalSteps, 'Generating embeddings');
         $embeddings = $this->generateEmbeddings($chunkDTOs, $options);
 
         $chunksWithEmbeddings = $this->mapEmbeddingsToChunks($chunkDTOs, $embeddings);
 
-        // Step 6: Validate token limit before storing vectors
-        $companyId = $options['company_id'] ?? null;
-        if ($companyId) {
-            $this->tokenLimitValidator->validate(companyId: $companyId, chunks: $chunksWithEmbeddings);
-        }
-
-        // Step 7: Store vectors in vector store
+        // Step 6: Store vectors in vector store
+        $this->updateProgress($options, ++$currentStep, $totalSteps, 'Storing vectors');
         $this->storeVectors($chunksWithEmbeddings);
 
-        // Step 8: Update persisted chunks with qdrant_point_id after vector storage
+        // Step 7: Update persisted chunks with qdrant_point_id after vector storage
+        $this->updateProgress($options, ++$currentStep, $totalSteps, 'Updating metadata');
         $this->updateChunksWithQdrantIds($chunksWithEmbeddings, $options);
 
-        // Step 9: Update usage metrics
+        // Step 8: Update usage metrics
+        $this->updateProgress($options, ++$currentStep, $totalSteps, 'Recording metrics');
         $companyId = $options['company_id'] ?? null;
         if ($companyId) {
             $this->usageMetricService->recordDocumentProcessing($companyId, $chunksWithEmbeddings);
         }
 
-        // Step 10: Call completion callback if provided (for updating version, etc.)
+        // Step 9: Call completion callback if provided (for updating version, etc.)
         if (isset($options['on_complete']) && is_callable($options['on_complete'])) {
             $options['on_complete'](count($chunksWithEmbeddings), $options['embedding_model'] ?? null);
         }
 
+        // Final progress update
+        $this->updateProgress($options, $totalSteps, $totalSteps, 'Completed');
+
         return $chunksWithEmbeddings;
+    }
+
+    /**
+     * Update progress tracking for the ingestion job.
+     *
+     * @param array<string, mixed> $options Processing options containing progress callback
+     * @param int $currentStep Current step number
+     * @param int $totalSteps Total number of steps
+     * @param string $status Current status message
+     * @return void
+     */
+    private function updateProgress(array $options, int $currentStep, int $totalSteps, string $status): void
+    {
+        if (isset($options['on_progress']) && is_callable($options['on_progress'])) {
+            $percentage = (int) (($currentStep / $totalSteps) * 100);
+            $options['on_progress']($percentage, $status, $currentStep, $totalSteps);
+        }
     }
 
     /**
@@ -201,7 +226,11 @@ class DocumentIngestionPipeline
     }
 
     /**
-     * Map embeddings to chunks and save vectors to chunk metadata.
+     * Map embeddings to chunks and save embedding metadata to MySQL.
+     *
+     * Note: As per architecture best practices, we NO LONGER store embedding vectors
+     * in MySQL metadata. Vectors are kept exclusively in Qdrant for optimal storage efficiency.
+     * However, we DO store important metadata (dimension, model, chunk_size, overlap) for reference.
      *
      * @param array<ChunkDTO> $chunks Array of chunks
      * @param array<\App\Domains\RAG\DTOs\EmbeddingDTO> $embeddings Array of embedding DTOs
@@ -211,11 +240,25 @@ class DocumentIngestionPipeline
     private function mapEmbeddingsToChunks(array $chunks, array $embeddings): array
     {
         $chunksWithEmbeddings = [];
+        $metadataUpdates = [];
+
         foreach ($chunks as $index => $chunk) {
             $embeddingDTO = $embeddings[$index] ?? null;
             if ($embeddingDTO instanceof \App\Domains\RAG\DTOs\EmbeddingDTO) {
-                // Save embedding vector to chunk metadata
-                $this->saveEmbeddingToChunkMetadata($chunk->id, $embeddingDTO);
+                // Prepare metadata update with embedding info (but NOT the vector itself)
+                $chunkModel = $this->chunkRepository->findById($chunk->id);
+                if ($chunkModel) {
+                    $metadata = $chunkModel->metadata ?? [];
+
+                    // Store embedding metadata (dimension, model) - NOT the vector
+                    $metadata['embedding_dimension'] = $embeddingDTO->dimension;
+                    $metadata['embedding_model'] = $embeddingDTO->model;
+
+                    // Preserve existing chunk metadata (chunk_size, overlap, etc.)
+                    // These should already be set from TextChunkingService, but ensure they're kept
+
+                    $metadataUpdates[$chunk->id] = $metadata;
+                }
 
                 $chunksWithEmbeddings[] = $chunk->withEmbedding($embeddingDTO);
             } else {
@@ -223,6 +266,11 @@ class DocumentIngestionPipeline
                     "Failed to generate embedding for chunk at index {$index}"
                 );
             }
+        }
+
+        // Batch update metadata for all chunks (without vectors)
+        if (!empty($metadataUpdates)) {
+            $this->chunkRepository->batchUpdateMetadata($metadataUpdates);
         }
 
         return $chunksWithEmbeddings;
@@ -260,35 +308,7 @@ class DocumentIngestionPipeline
     }
 
     /**
-     * Save embedding vector to chunk metadata.
-     *
-     * @param int $chunkId The chunk ID
-     * @param \App\Domains\RAG\DTOs\EmbeddingDTO $embeddingDTO The embedding DTO
-     * @return void
-     */
-    private function saveEmbeddingToChunkMetadata(int $chunkId, \App\Domains\RAG\DTOs\EmbeddingDTO $embeddingDTO): void
-    {
-        $chunk = $this->chunkRepository->findById($chunkId);
-        if (!$chunk) {
-            return;
-        }
-
-        // Update metadata with embedding vector and dimension
-        $metadata = $chunk->metadata ?? [];
-        $metadata['embedding_vector'] = $embeddingDTO->vector;
-        $metadata['embedding_dimension'] = $embeddingDTO->dimension;
-
-        // Update embedding model if not set
-        if (!$chunk->embedding_model) {
-            $chunk->embedding_model = $embeddingDTO->model;
-        }
-
-        $chunk->metadata = $metadata;
-        $chunk->save();
-    }
-
-    /**
-     * Update persisted chunks with Qdrant point IDs.
+     * Update persisted chunks with Qdrant point IDs in batch.
      *
      * @param array<ChunkDTO> $chunksWithEmbeddings Chunk DTOs with embeddings
      * @param array<string, mixed> $options Processing options
@@ -314,7 +334,8 @@ class DocumentIngestionPipeline
             $chunkDTOsMap[$chunkDTO->id] = $chunkDTO;
         }
 
-        // Update persisted chunks with qdrant_point_id
+        // Prepare batch updates for Qdrant IDs
+        $qdrantIdUpdates = [];
         foreach ($persistedChunks as $chunk) {
             $chunkDTO = $chunkDTOsMap[$chunk->id] ?? null;
 
@@ -326,10 +347,13 @@ class DocumentIngestionPipeline
             $uuid = $chunkDTO->metadata['uuid'] ?? $chunk->uuid;
 
             if ($uuid) {
-                $chunk->qdrant_point_id = $uuid;
-                $chunk->qdrant_collection = 'documents';
-                $chunk->save();
+                $qdrantIdUpdates[$chunk->id] = $uuid;
             }
+        }
+
+        // Batch update Qdrant IDs
+        if (!empty($qdrantIdUpdates)) {
+            $this->chunkRepository->batchUpdateQdrantIds($qdrantIdUpdates, 'documents');
         }
     }
 }
