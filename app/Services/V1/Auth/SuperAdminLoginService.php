@@ -2,12 +2,12 @@
 
 namespace App\Services\V1\Auth;
 
-use App\Contracts\V1\SuperAdminLoginServiceInterface;
+use App\Services\V1\Contracts\SuperAdminLoginServiceInterface;
 use App\Exceptions\AuthenticationException;
 use App\Http\Requests\SuperAdminLoginRequest;
 use App\Models\User;
-use App\Repositories\V1\AdminActionRepositoryInterface;
-use App\Repositories\V1\UserRepositoryInterface;
+use App\Repositories\V1\Contracts\AdminActionRepositoryInterface;
+use App\Repositories\V1\Contracts\UserRepositoryInterface;
 
 class SuperAdminLoginService implements SuperAdminLoginServiceInterface
 {

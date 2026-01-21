@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\V1\Api;
 
-use App\Contracts\V1\ApiKeyServiceInterface;
+use App\Services\V1\Contracts\ApiKeyServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\V1\Concerns\ResponseHandler;
 use App\Http\Requests\CreateApiKeyRequest;
 use App\Http\Requests\UpdateApiKeyRequest;
-use App\Http\Resources\ApiKeyResource;
-use App\Models\Company;
-use App\Models\CompanyApiKey;
-use App\Services\V1\Common\PaginatedResponseFormatter;
+use App\Services\V1\DTOs\CreateApiKeyDTO;
+use App\Services\V1\DTOs\GetApiKeyDTO;
+use App\Services\V1\DTOs\ListApiKeysDTO;
+use App\Services\V1\DTOs\UpdateApiKeyDTO;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,20 +39,20 @@ class ApiKeyController extends Controller
         $company = $request->user()->company;
 
         $isActive = $request->query('is_active');
-        $filters = [
-            'is_active' => $isActive !== null ? filter_var($isActive, FILTER_VALIDATE_BOOLEAN) : null,
-            'search' => $request->query('search'),
-        ];
-
-        // Remove null values
-        $filters = array_filter($filters, fn($value) => $value !== null);
+        $isActiveBool = $isActive !== null ? filter_var($isActive, FILTER_VALIDATE_BOOLEAN) : null;
 
         $perPage = (int) $request->query('per_page', 15);
         $perPage = min(max($perPage, 1), 100);
 
-        $apiKeys = $this->apiKeyService->getAllForCompany($company, $filters, $perPage);
-        $formattedResponse = PaginatedResponseFormatter::formatWithResource($apiKeys, ApiKeyResource::class);
-        return $this->respondSuccess($formattedResponse);
+        $dto = new ListApiKeysDTO(
+            companyId: $company->id,
+            isActive: $isActiveBool,
+            search: $request->query('search'),
+            perPage: $perPage
+        );
+
+        $resource = $this->apiKeyService->getAllForCompany($dto);
+        return $this->respondResource($resource, 'API keys retrieved successfully');
     }
 
     /**
@@ -65,10 +65,16 @@ class ApiKeyController extends Controller
     public function show(Request $request, string|int $apiKey): JsonResponse
     {
         $company = $request->user()->company;
-        $apiKeyModel = $this->apiKeyService->getApiKey($company, $apiKey);
+
+        $dto = new GetApiKeyDTO(
+            companyId: $company->id,
+            identifier: $apiKey
+        );
+
+        $apiKeyResource = $this->apiKeyService->getApiKey($dto);
 
         return $this->respondResource(
-            new ApiKeyResource($apiKeyModel),
+            $apiKeyResource,
             'API key retrieved successfully'
         );
     }
@@ -85,19 +91,27 @@ class ApiKeyController extends Controller
             DB::beginTransaction();
             $company = $request->user()->company;
             $user = $request->user();
+            $validated = $request->validated();
 
-            $result = $this->apiKeyService->createApiKey(
-                $company,
-                $user,
-                $request->validated()
+            $dto = new CreateApiKeyDTO(
+                companyId: $company->id,
+                userId: $user->id,
+                name: $validated['name'],
+                rateLimitPerMinute: $validated['rate_limit_per_minute'] ?? null,
+                rateLimitPerHour: $validated['rate_limit_per_hour'] ?? null,
+                isActive: $validated['is_active'] ?? true,
+                expiresAt: $validated['expires_at'] ?? null
             );
+
+            $resource = $this->apiKeyService->createApiKey($dto);
 
             DB::commit();
 
-            return $this->respondSuccess([
-                'data' => new ApiKeyResource($result['apiKey']),
-                'key' => $result['plainKey'], // Only shown once
-            ], 'API key created successfully. Please save this key securely - it will not be shown again.', 201);
+            return $this->respondResource(
+                $resource,
+                'API key created successfully. Please save this key securely - it will not be shown again.',
+                201
+            );
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;
@@ -116,17 +130,30 @@ class ApiKeyController extends Controller
         try {
             DB::beginTransaction();
             $company = $request->user()->company;
-            $apiKeyModel = $this->apiKeyService->getApiKey($company, $apiKey);
 
-            $updatedApiKey = $this->apiKeyService->updateApiKey(
-                $apiKeyModel,
-                $request->validated()
+            // Get API key ID first
+            $getDto = new GetApiKeyDTO(
+                companyId: $company->id,
+                identifier: $apiKey
             );
+            $apiKeyResource = $this->apiKeyService->getApiKey($getDto);
+            $apiKeyId = $apiKeyResource->id;
+
+            $validated = $request->validated();
+            $updateDto = new UpdateApiKeyDTO(
+                name: $validated['name'] ?? null,
+                rateLimitPerMinute: $validated['rate_limit_per_minute'] ?? null,
+                rateLimitPerHour: $validated['rate_limit_per_hour'] ?? null,
+                isActive: $validated['is_active'] ?? null,
+                expiresAt: $validated['expires_at'] ?? null
+            );
+
+            $updatedApiKey = $this->apiKeyService->updateApiKey($apiKeyId, $updateDto);
 
             DB::commit();
 
             return $this->respondResource(
-                new ApiKeyResource($updatedApiKey),
+                $updatedApiKey,
                 'API key updated successfully'
             );
         } catch (\Exception $e) {
@@ -147,9 +174,16 @@ class ApiKeyController extends Controller
         try {
             DB::beginTransaction();
             $company = $request->user()->company;
-            $apiKeyModel = $this->apiKeyService->getApiKey($company, $apiKey);
 
-            $this->apiKeyService->deleteApiKey($apiKeyModel);
+            // Get API key ID first
+            $getDto = new GetApiKeyDTO(
+                companyId: $company->id,
+                identifier: $apiKey
+            );
+            $apiKeyResource = $this->apiKeyService->getApiKey($getDto);
+            $apiKeyId = $apiKeyResource->id;
+
+            $this->apiKeyService->deleteApiKey($apiKeyId);
             DB::commit();
 
             return $this->respondMessage('API key revoked successfully');
@@ -171,15 +205,22 @@ class ApiKeyController extends Controller
         try {
             DB::beginTransaction();
             $company = $request->user()->company;
-            $apiKeyModel = $this->apiKeyService->getApiKey($company, $apiKey);
 
-            $result = $this->apiKeyService->regenerateApiKey($apiKeyModel);
+            // Get API key ID first
+            $getDto = new GetApiKeyDTO(
+                companyId: $company->id,
+                identifier: $apiKey
+            );
+            $apiKeyResource = $this->apiKeyService->getApiKey($getDto);
+            $apiKeyId = $apiKeyResource->id;
+
+            $resource = $this->apiKeyService->regenerateApiKey($apiKeyId);
             DB::commit();
 
-            return $this->respondSuccess([
-                'data' => new ApiKeyResource($result['apiKey']),
-                'key' => $result['plainKey'], // Only shown once
-            ], 'API key regenerated successfully. Please save this key securely - it will not be shown again.');
+            return $this->respondResource(
+                $resource,
+                'API key regenerated successfully. Please save this key securely - it will not be shown again.'
+            );
         } catch (\Exception $e) {
             DB::rollBack();
             throw $e;

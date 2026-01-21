@@ -5,8 +5,8 @@ namespace App\Domains\RAG\VectorStores\Qdrant;
 use App\Domains\RAG\Contracts\VectorStore;
 use App\Domains\RAG\DTOs\ChunkDTO;
 use App\Domains\RAG\Exceptions\QdrantException;
+use App\Services\V1\Common\LogService;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Qdrant vector store implementation.
@@ -18,6 +18,15 @@ class QdrantVectorStore implements VectorStore
 {
     private const DEFAULT_VECTOR_DIMENSION = 1536;
     private const DOCUMENT_COLLECTION_NAME = 'documents';
+
+    /**
+     * Create a new Qdrant vector store instance.
+     *
+     * @param LogService $logService
+     */
+    public function __construct(
+        private readonly LogService $logService
+    ) {}
 
     /**
      * Ensure Qdrant collection exists.
@@ -68,7 +77,7 @@ class QdrantVectorStore implements VectorStore
 
             return true;
         } catch (\Exception $e) {
-            Log::error('Qdrant collection operation failed', [
+            $this->logService->error('Qdrant collection operation failed', [
                 'collection' => $collectionName,
                 'error' => $e->getMessage(),
             ]);
@@ -139,14 +148,14 @@ class QdrantVectorStore implements VectorStore
                 throw new QdrantException('Failed to upsert points to Qdrant: ' . $response->body());
             }
 
-            Log::info('Upserted chunks to Qdrant', [
+            $this->logService->info('Upserted chunks to Qdrant', [
                 'collection' => $collectionName,
                 'count' => count($points),
             ]);
 
             return $chunks;
         } catch (\Exception $e) {
-            Log::error('Qdrant upsert failed', [
+            $this->logService->error('Qdrant upsert failed', [
                 'collection' => $collectionName,
                 'error' => $e->getMessage(),
             ]);
@@ -216,7 +225,7 @@ class QdrantVectorStore implements VectorStore
 
             return $chunks;
         } catch (\Exception $e) {
-            Log::error('Qdrant search failed', [
+            $this->logService->error('Qdrant search failed', [
                 'collection' => $collectionName,
                 'error' => $e->getMessage(),
             ]);
@@ -254,14 +263,14 @@ class QdrantVectorStore implements VectorStore
                 throw new QdrantException('Failed to delete points from Qdrant: ' . $response->body());
             }
 
-            Log::info('Deleted document chunks from Qdrant', [
+            $this->logService->info('Deleted document chunks from Qdrant', [
                 'collection' => $collectionName,
                 'document_id' => $documentId,
             ]);
 
             return true;
         } catch (\Exception $e) {
-            Log::error('Qdrant delete failed', [
+            $this->logService->error('Qdrant delete failed', [
                 'collection' => $collectionName,
                 'document_id' => $documentId,
                 'error' => $e->getMessage(),

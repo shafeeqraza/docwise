@@ -4,7 +4,7 @@ namespace App\Domains\RAG\Services;
 
 use App\Domains\RAG\Contracts\EmbeddingProvider;
 use App\Domains\RAG\DTOs\EmbeddingDTO;
-use Illuminate\Support\Facades\Log;
+use App\Services\V1\Common\LogService;
 
 /**
  * Service for generating embeddings for document chunks.
@@ -15,7 +15,8 @@ use Illuminate\Support\Facades\Log;
 class EmbeddingService
 {
     public function __construct(
-        private EmbeddingProvider $embeddingProvider
+        private EmbeddingProvider $embeddingProvider,
+        private LogService $logService
     ) {}
 
     /**
@@ -56,14 +57,14 @@ class EmbeddingService
 
                     $results[] = $chunk;
                 } else {
-                    Log::warning('Invalid embedding for chunk', [
+                    $this->logService->warning('Invalid embedding for chunk', [
                         'chunk_id' => $chunk->id,
                         'model' => $model,
                     ]);
                 }
             }
         } catch (\Exception $e) {
-            Log::error('Embedding generation failed', [
+            $this->logService->error('Embedding generation failed', [
                 'model' => $model,
                 'chunk_count' => count($chunks),
                 'error' => $e->getMessage(),

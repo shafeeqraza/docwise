@@ -2,12 +2,15 @@
 
 namespace App\Services\V1\Company;
 
-use App\Contracts\V1\ApiKeyServiceInterface;
-use App\Models\Company;
+use App\Services\V1\Contracts\ApiKeyServiceInterface;
+use App\Http\Resources\ApiKeyResource;
+use App\Http\Resources\PaginatedResourceCollection;
 use App\Models\CompanyApiKey;
-use App\Models\User;
-use App\Repositories\V1\ApiKeyRepositoryInterface;
-use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use App\Repositories\V1\Contracts\ApiKeyRepositoryInterface;
+use App\Services\V1\DTOs\CreateApiKeyDTO;
+use App\Services\V1\DTOs\GetApiKeyDTO;
+use App\Services\V1\DTOs\ListApiKeysDTO;
+use App\Services\V1\DTOs\UpdateApiKeyDTO;
 
 class ApiKeyService implements ApiKeyServiceInterface
 {
@@ -23,108 +26,133 @@ class ApiKeyService implements ApiKeyServiceInterface
     /**
      * Get all API keys for a company.
      *
-     * @param Company $company
-     * @param array $filters
-     * @param int $perPage
-     * @return LengthAwarePaginator
+     * @param ListApiKeysDTO $dto
+     * @return \App\Http\Resources\PaginatedResourceCollection
      */
-    public function getAllForCompany(Company $company, array $filters = [], int $perPage = 15): LengthAwarePaginator
+    public function getAllForCompany(ListApiKeysDTO $dto): PaginatedResourceCollection
     {
-        return $this->apiKeyRepository->getAllForCompany($company->id, $filters, $perPage);
+        $filters = array_filter([
+            'is_active' => $dto->isActive,
+            'search' => $dto->search,
+        ], fn($value) => $value !== null);
+
+        $apiKeys = $this->apiKeyRepository->getAllForCompany($dto->companyId, $filters, $dto->perPage);
+
+        return new PaginatedResourceCollection(
+            ApiKeyResource::collection($apiKeys->items()),
+            $apiKeys
+        );
     }
 
     /**
      * Get API key by ID or UUID.
      *
-     * @param Company $company
-     * @param string|int $identifier
-     * @return CompanyApiKey
+     * @param GetApiKeyDTO $dto
+     * @return ApiKeyResource
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
-    public function getApiKey(Company $company, string|int $identifier): CompanyApiKey
+    public function getApiKey(GetApiKeyDTO $dto): ApiKeyResource
     {
-        if (is_numeric($identifier)) {
-            $apiKey = $this->apiKeyRepository->findById((int) $identifier);
+        if (is_numeric($dto->identifier)) {
+            $apiKey = $this->apiKeyRepository->findById((int) $dto->identifier);
         } else {
-            $apiKey = $this->apiKeyRepository->findByUuid($identifier);
+            $apiKey = $this->apiKeyRepository->findByUuid($dto->identifier);
         }
 
-        if (!$apiKey || $apiKey->company_id !== $company->id) {
+        if (!$apiKey || $apiKey->company_id !== $dto->companyId) {
             throw new \Illuminate\Database\Eloquent\ModelNotFoundException('API key not found');
         }
 
-        return $apiKey;
+        return new ApiKeyResource($apiKey);
     }
 
     /**
      * Create a new API key.
      *
-     * @param Company $company
-     * @param User $user
-     * @param array $data
-     * @return array{apiKey: CompanyApiKey, plainKey: string}
+     * @param CreateApiKeyDTO $dto
+     * @return ApiKeyResource
      */
-    public function createApiKey(Company $company, User $user, array $data): array
+    public function createApiKey(CreateApiKeyDTO $dto): ApiKeyResource
     {
         // Generate the API key
         $keyData = CompanyApiKey::generateKey();
 
         // Prepare API key data
         $apiKeyData = [
-            'company_id' => $company->id,
-            'name' => $data['name'],
+            'company_id' => $dto->companyId,
+            'name' => $dto->name,
             'key_hash' => $keyData['hash'],
             'key_prefix' => $keyData['prefix'],
             'permissions' => ['widget:chat'],
-            'rate_limit_per_minute' => $data['rate_limit_per_minute'] ?? 60,
-            'rate_limit_per_hour' => $data['rate_limit_per_hour'] ?? 1000,
-            'is_active' => $data['is_active'] ?? true,
-            'expires_at' => isset($data['expires_at']) ? $data['expires_at'] : null,
-            'created_by' => $user->id,
+            'rate_limit_per_minute' => $dto->rateLimitPerMinute,
+            'rate_limit_per_hour' => $dto->rateLimitPerHour,
+            'is_active' => $dto->isActive,
+            'expires_at' => $dto->expiresAt,
+            'created_by' => $dto->userId,
         ];
 
         $apiKey = $this->apiKeyRepository->create($apiKeyData);
 
-        return [
-            'apiKey' => $apiKey,
-            'plainKey' => $keyData['key'],
-        ];
+        return new ApiKeyResource($apiKey, $keyData['key']);
     }
 
     /**
      * Update API key.
      *
-     * @param CompanyApiKey $apiKey
-     * @param array $data
-     * @return CompanyApiKey
+     * @param int $apiKeyId
+     * @param UpdateApiKeyDTO $dto
+     * @return ApiKeyResource
      */
-    public function updateApiKey(CompanyApiKey $apiKey, array $data): CompanyApiKey
+    public function updateApiKey(int $apiKeyId, UpdateApiKeyDTO $dto): ApiKeyResource
     {
-        $this->apiKeyRepository->update($apiKey, $data);
+        $apiKey = $this->apiKeyRepository->findById($apiKeyId);
+        if (!$apiKey) {
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('API key not found');
+        }
+
+        $updateData = array_filter([
+            'name' => $dto->name,
+            'rate_limit_per_minute' => $dto->rateLimitPerMinute,
+            'rate_limit_per_hour' => $dto->rateLimitPerHour,
+            'is_active' => $dto->isActive,
+            'expires_at' => $dto->expiresAt,
+        ], fn($value) => $value !== null);
+
+        $this->apiKeyRepository->update($apiKey, $updateData);
         $apiKey->refresh();
 
-        return $apiKey;
+        return new ApiKeyResource($apiKey);
     }
 
     /**
      * Delete (revoke) API key.
      *
-     * @param CompanyApiKey $apiKey
+     * @param int $apiKeyId
      * @return bool
      */
-    public function deleteApiKey(CompanyApiKey $apiKey): bool
+    public function deleteApiKey(int $apiKeyId): bool
     {
+        $apiKey = $this->apiKeyRepository->findById($apiKeyId);
+        if (!$apiKey) {
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('API key not found');
+        }
+
         return $this->apiKeyRepository->delete($apiKey);
     }
 
     /**
      * Regenerate API key.
      *
-     * @param CompanyApiKey $apiKey
-     * @return array{apiKey: CompanyApiKey, plainKey: string}
+     * @param int $apiKeyId
+     * @return ApiKeyResource
      */
-    public function regenerateApiKey(CompanyApiKey $apiKey): array
+    public function regenerateApiKey(int $apiKeyId): ApiKeyResource
     {
+        $apiKey = $this->apiKeyRepository->findById($apiKeyId);
+        if (!$apiKey) {
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException('API key not found');
+        }
+
         // Extract prefix from existing key (e.g., "cs_live" from "cs_live_abc...")
         $prefixParts = explode('_', $apiKey->key_prefix);
         $prefix = count($prefixParts) >= 2
@@ -141,10 +169,7 @@ class ApiKeyService implements ApiKeyServiceInterface
 
         $apiKey->refresh();
 
-        return [
-            'apiKey' => $apiKey,
-            'plainKey' => $keyData['key'],
-        ];
+        return new ApiKeyResource($apiKey, $keyData['key']);
     }
 
     /**

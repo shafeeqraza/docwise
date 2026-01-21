@@ -3,8 +3,8 @@
 namespace App\Domains\RAG\Embeddings\Concerns;
 
 use App\Domains\RAG\Exceptions\EmbeddingFailedException;
+use App\Services\V1\Common\LogService;
 use Illuminate\Http\Client\RequestException;
-use Illuminate\Support\Facades\Log;
 
 /**
  * Trait for retrying embedding requests with exponential backoff.
@@ -13,6 +13,13 @@ use Illuminate\Support\Facades\Log;
  */
 trait RetriesEmbeddingRequests
 {
+    /**
+     * Log service instance.
+     * Classes using this trait should inject LogService via constructor.
+     *
+     * @var LogService|null
+     */
+    protected ?LogService $logService = null;
     /**
      * Retry a callable operation with exponential backoff.
      *
@@ -93,10 +100,12 @@ trait RetriesEmbeddingRequests
      */
     protected function logError(string $message, string $model, \Exception $exception, array $context = []): void
     {
-        Log::error($message, array_merge([
-            'model' => $model,
-            'error' => $exception->getMessage(),
-        ], $context));
+        if ($this->logService) {
+            $this->logService->error($message, array_merge([
+                'model' => $model,
+                'error' => $exception->getMessage(),
+            ], $context));
+        }
     }
 
     /**
@@ -110,10 +119,12 @@ trait RetriesEmbeddingRequests
      */
     protected function logWarning(string $message, string $model, \Exception $exception, array $context = []): void
     {
-        Log::warning($message, array_merge([
-            'model' => $model,
-            'error' => $exception->getMessage(),
-            'exception' => $exception,
-        ], $context));
+        if ($this->logService) {
+            $this->logService->warning($message, array_merge([
+                'model' => $model,
+                'error' => $exception->getMessage(),
+                'exception' => $exception,
+            ], $context));
+        }
     }
 }

@@ -8,12 +8,21 @@ use Cloudinary\Configuration\Configuration;
 use Cloudinary\Transformation\Transformation;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Services\V1\Common\LogService;
 
 class FileStorageService
 {
     private ?Cloudinary $cloudinary = null;
+
+    /**
+     * Create a new service instance.
+     *
+     * @param LogService $logService
+     */
+    public function __construct(
+        private readonly LogService $logService
+    ) {}
 
     /**
      * Configure Cloudinary with credentials from environment.
@@ -116,7 +125,7 @@ class FileStorageService
             return $result['result'] === 'ok';
         } catch (\Exception $e) {
             // Log error but don't throw - file might already be deleted
-            Log::warning('Failed to delete file from Cloudinary', [
+            $this->logService->warning('Failed to delete file from Cloudinary', [
                 'public_id' => $publicId,
                 'error' => $e->getMessage(),
             ]);

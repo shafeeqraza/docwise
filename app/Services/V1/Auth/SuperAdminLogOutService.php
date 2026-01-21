@@ -2,8 +2,8 @@
 
 namespace App\Services\V1\Auth;
 
-use App\Contracts\V1\SuperAdminLogOutServiceInterface;
-use App\Repositories\V1\AdminActionRepositoryInterface;
+use App\Services\V1\Contracts\SuperAdminLogOutServiceInterface;
+use App\Repositories\V1\Contracts\AdminActionRepositoryInterface;
 use App\Models\User;
 use Illuminate\Http\Request;
 

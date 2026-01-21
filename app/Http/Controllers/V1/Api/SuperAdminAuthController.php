@@ -3,14 +3,14 @@
 namespace App\Http\Controllers\V1\Api;
 
 use App\Http\Controllers\V1\Concerns\ResponseHandler;
-use App\Contracts\V1\SuperAdminLoginServiceInterface;
-use App\Contracts\V1\SuperAdminLogOutServiceInterface;
+use App\Services\V1\Contracts\SuperAdminLoginServiceInterface;
+use App\Services\V1\Contracts\SuperAdminLogOutServiceInterface;
 use App\Exceptions\AuthenticationException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SuperAdminLoginRequest;
 use App\Http\Resources\LoginResponseResource;
 use App\Http\Resources\SuperAdminResource;
-use App\Repositories\V1\AdminActionRepositoryInterface;
+use App\Repositories\V1\Contracts\AdminActionRepositoryInterface;
 use App\Services\V1\Auth\AuthCookieService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;

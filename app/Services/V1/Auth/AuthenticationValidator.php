@@ -4,9 +4,9 @@ namespace App\Services\V1\Auth;
 
 use App\Exceptions\AuthenticationException;
 use App\Models\User;
-use App\Repositories\V1\UserRepositoryInterface;
+use App\Repositories\V1\Contracts\UserRepositoryInterface;
+use App\Services\V1\Common\LogService;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Log;
 
 class AuthenticationValidator
 {
@@ -14,9 +14,11 @@ class AuthenticationValidator
      * Create a new service instance.
      *
      * @param UserRepositoryInterface $userRepository
+     * @param LogService $logService
      */
     public function __construct(
-        private readonly UserRepositoryInterface $userRepository
+        private readonly UserRepositoryInterface $userRepository,
+        private readonly LogService $logService
     ) {}
 
     /**
@@ -56,7 +58,7 @@ class AuthenticationValidator
     public function validateSuperAdmin(User $user, string $email, string $ipAddress): void
     {
         if (!$user->isSuperAdmin()) {
-            Log::warning('Non-superadmin attempt to access superadmin login', [
+            $this->logService->warning('Non-superadmin attempt to access superadmin login', [
                 'email' => $email,
                 'ip' => $ipAddress,
                 'user_id' => $user->id,

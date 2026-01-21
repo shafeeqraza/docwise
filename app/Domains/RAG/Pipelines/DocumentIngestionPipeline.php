@@ -13,7 +13,7 @@ use App\Domains\RAG\Factories\EmbeddingProviderFactory;
 use App\Domains\RAG\Services\TextChunkingService;
 use App\Domains\RAG\Services\UsageMetricService;
 use App\Domains\RAG\Validators\TokenLimitValidator;
-use App\Repositories\V1\DocumentChunkRepositoryInterface;
+use App\Repositories\V1\Contracts\DocumentChunkRepositoryInterface;
 
 /**
  * Document ingestion pipeline that orchestrates the RAG workflow.

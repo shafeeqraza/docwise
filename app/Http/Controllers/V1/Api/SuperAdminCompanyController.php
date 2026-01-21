@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers\V1\Api;
 
-use App\Contracts\V1\SuperAdminCompanyServiceInterface;
+use App\Services\V1\Contracts\SuperAdminCompanyServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\V1\Concerns\ResponseHandler;
 use App\Http\Requests\CreateCompanyRequest;
 use App\Http\Requests\UpdateCompanyRequest;
-use App\Http\Resources\CompanyResource;
-use App\Models\Company;
-use App\Repositories\V1\AdminActionRepositoryInterface;
+use App\Repositories\V1\Contracts\AdminActionRepositoryInterface;
+use App\Services\V1\DTOs\CreateCompanyDTO;
+use App\Services\V1\DTOs\GetCompanyDTO;
+use App\Services\V1\DTOs\ListCompaniesDTO;
+use App\Services\V1\DTOs\UpdateCompanyDTO;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -38,36 +40,20 @@ class SuperAdminCompanyController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $filters = [
-            'status' => $request->query('status'),
-            'subscription_plan' => $request->query('subscription_plan'),
-            'payment_status' => $request->query('payment_status'),
-            'search' => $request->query('search'),
-        ];
-
-        // Remove null values
-        $filters = array_filter($filters, fn($value) => $value !== null);
-
         $perPage = (int) $request->query('per_page', 15);
         $perPage = min(max($perPage, 1), 100); // Limit between 1 and 100
 
-        $companies = $this->companyService->getAllCompanies($filters, $perPage);
+        $dto = new ListCompaniesDTO(
+            status: $request->query('status'),
+            subscriptionPlan: $request->query('subscription_plan'),
+            paymentStatus: $request->query('payment_status'),
+            search: $request->query('search'),
+            perPage: $perPage
+        );
 
-        return $this->respondSuccess([
-            'data' => CompanyResource::collection($companies->items()),
-            'meta' => [
-                'current_page' => $companies->currentPage(),
-                'last_page' => $companies->lastPage(),
-                'per_page' => $companies->perPage(),
-                'total' => $companies->total(),
-            ],
-            'links' => [
-                'first' => $companies->url(1),
-                'last' => $companies->url($companies->lastPage()),
-                'prev' => $companies->previousPageUrl(),
-                'next' => $companies->nextPageUrl(),
-            ],
-        ], 'Companies retrieved successfully');
+        $resource = $this->companyService->getAllCompanies($dto);
+
+        return $this->respondResource($resource, 'Companies retrieved successfully');
     }
 
     /**
@@ -78,9 +64,11 @@ class SuperAdminCompanyController extends Controller
      */
     public function show(string|int $company): JsonResponse
     {
-        $companyModel = $this->companyService->getCompany($company);
+        $dto = new GetCompanyDTO(identifier: $company);
+        $companyResource = $this->companyService->getCompany($dto);
+
         return $this->respondResource(
-            new CompanyResource($companyModel),
+            $companyResource,
             'Company retrieved successfully'
         );
     }
@@ -96,24 +84,40 @@ class SuperAdminCompanyController extends Controller
         try {
             DB::beginTransaction();
             $user = $request->user();
-            $company = $this->companyService->createCompany($request->validated());
+            $validated = $request->validated();
+
+            $dto = new CreateCompanyDTO(
+                name: $validated['name'],
+                slug: $validated['slug'] ?? null,
+                email: $validated['email'] ?? null,
+                phone: $validated['phone'] ?? null,
+                status: $validated['status'] ?? 'active',
+                subscriptionPlan: $validated['subscription_plan'] ?? 'basic',
+                billingCycle: $validated['billing_cycle'] ?? 'monthly',
+                paymentStatus: $validated['payment_status'] ?? 'active',
+                allowOverages: $validated['allow_overages'] ?? false,
+                settings: $validated['settings'] ?? null
+            );
+
+            $companyResource = $this->companyService->createCompany($dto);
             DB::commit();
 
             // Log admin action
             $this->adminActionRepository->logAction(
                 user: $user,
                 action: 'company.create',
-                targetCompanyId: $company->id,
+                targetCompanyId: $companyResource->id,
                 details: [
-                    'company_name' => $company->name,
-                    'company_uuid' => $company->uuid,
-                    'subscription_plan' => $company->subscription_plan,
+                    'company_name' => $companyResource->name,
+                    'company_uuid' => $companyResource->uuid,
+                    'subscription_plan' => $companyResource->subscription_plan,
                 ],
                 ipAddress: $request->ip(),
                 userAgent: $request->userAgent()
             );
+
             return $this->respondResource(
-                new CompanyResource($company),
+                $companyResource,
                 'Company created successfully',
                 201
             );
@@ -135,18 +139,33 @@ class SuperAdminCompanyController extends Controller
         try {
             DB::beginTransaction();
             $user = $request->user();
-            $companyModel = $this->companyService->getCompany($company);
+
+            // Get company ID first
+            $getDto = new GetCompanyDTO(identifier: $company);
+            $companyResource = $this->companyService->getCompany($getDto);
+            $companyId = $companyResource->id;
 
             $oldData = [
-                'name' => $companyModel->name,
-                'status' => $companyModel->status,
-                'subscription_plan' => $companyModel->subscription_plan,
+                'name' => $companyResource->name,
+                'status' => $companyResource->status,
+                'subscription_plan' => $companyResource->subscription_plan,
             ];
 
-            $updatedCompany = $this->companyService->updateCompany(
-                $companyModel,
-                $request->validated()
+            $validated = $request->validated();
+            $updateDto = new UpdateCompanyDTO(
+                name: $validated['name'] ?? null,
+                slug: $validated['slug'] ?? null,
+                email: $validated['email'] ?? null,
+                phone: $validated['phone'] ?? null,
+                status: $validated['status'] ?? null,
+                subscriptionPlan: $validated['subscription_plan'] ?? null,
+                billingCycle: $validated['billing_cycle'] ?? null,
+                paymentStatus: $validated['payment_status'] ?? null,
+                allowOverages: $validated['allow_overages'] ?? null,
+                settings: $validated['settings'] ?? null
             );
+
+            $updatedCompany = $this->companyService->updateCompany($companyId, $updateDto);
             DB::commit();
 
             // Log admin action
@@ -168,7 +187,7 @@ class SuperAdminCompanyController extends Controller
             );
 
             return $this->respondResource(
-                new CompanyResource($updatedCompany),
+                $updatedCompany,
                 'Company updated successfully'
             );
         } catch (\Exception $e) {
@@ -189,19 +208,23 @@ class SuperAdminCompanyController extends Controller
         try {
             DB::beginTransaction();
             $user = $request->user();
-            $companyModel = $this->companyService->getCompany($company);
 
-            $this->companyService->deleteCompany($companyModel);
+            // Get company ID first
+            $getDto = new GetCompanyDTO(identifier: $company);
+            $companyResource = $this->companyService->getCompany($getDto);
+            $companyId = $companyResource->id;
+
+            $this->companyService->deleteCompany($companyId);
             DB::commit();
 
             // Log admin action
             $this->adminActionRepository->logAction(
                 user: $user,
                 action: 'company.delete',
-                targetCompanyId: $companyModel->id,
+                targetCompanyId: $companyId,
                 details: [
-                    'company_name' => $companyModel->name,
-                    'company_uuid' => $companyModel->uuid,
+                    'company_name' => $companyResource->name,
+                    'company_uuid' => $companyResource->uuid,
                 ],
                 ipAddress: $request->ip(),
                 userAgent: $request->userAgent()
@@ -226,9 +249,13 @@ class SuperAdminCompanyController extends Controller
         try {
             DB::beginTransaction();
             $user = $request->user();
-            $companyModel = $this->companyService->getCompany($company);
 
-            $updatedCompany = $this->companyService->suspendCompany($companyModel);
+            // Get company ID first
+            $getDto = new GetCompanyDTO(identifier: $company);
+            $companyResource = $this->companyService->getCompany($getDto);
+            $companyId = $companyResource->id;
+
+            $updatedCompany = $this->companyService->suspendCompany($companyId);
             DB::commit();
 
             // Log admin action
@@ -245,7 +272,7 @@ class SuperAdminCompanyController extends Controller
             );
 
             return $this->respondResource(
-                new CompanyResource($updatedCompany),
+                $updatedCompany,
                 'Company suspended successfully'
             );
         } catch (\Exception $e) {
@@ -266,9 +293,13 @@ class SuperAdminCompanyController extends Controller
         try {
             DB::beginTransaction();
             $user = $request->user();
-            $companyModel = $this->companyService->getCompany($company);
 
-            $updatedCompany = $this->companyService->activateCompany($companyModel);
+            // Get company ID first
+            $getDto = new GetCompanyDTO(identifier: $company);
+            $companyResource = $this->companyService->getCompany($getDto);
+            $companyId = $companyResource->id;
+
+            $updatedCompany = $this->companyService->activateCompany($companyId);
             DB::commit();
 
             // Log admin action
@@ -285,7 +316,7 @@ class SuperAdminCompanyController extends Controller
             );
 
             return $this->respondResource(
-                new CompanyResource($updatedCompany),
+                $updatedCompany,
                 'Company activated successfully'
             );
         } catch (\Exception $e) {

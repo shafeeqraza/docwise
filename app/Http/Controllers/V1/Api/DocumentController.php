@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\V1\Api;
 
-use App\Contracts\V1\DocumentServiceInterface;
+use App\Services\V1\Contracts\DocumentServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\V1\Concerns\ResponseHandler;
 use App\Http\Requests\ListDocumentsRequest;
 use App\Http\Requests\UploadDocumentRequest;
-use App\Repositories\V1\AdminActionRepositoryInterface;
+use App\Repositories\V1\Contracts\AdminActionRepositoryInterface;
+use App\Services\V1\DTOs\DeleteDocumentDTO;
+use App\Services\V1\DTOs\GetDocumentDTO;
+use App\Services\V1\DTOs\ListDocumentsDTO;
+use App\Services\V1\DTOs\UploadDocumentDTO;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -27,21 +31,23 @@ class DocumentController extends Controller
      * - X-Company-Id header (for superadmin impersonation)
      * - User's company_id (for regular users)
      */
-    public function upload(UploadDocumentRequest $request)
+    public function upload(UploadDocumentRequest $request): JsonResponse
     {
         $companyId = $request->attributes->get('current_company_id');
-
         $user = $request->user();
-        $userId = $user->id;
 
-        $metadata = [
-            'title' => $request->input('title'),
-            'description' => $request->input('description'),
-            'tags' => $request->input('tags', []),
-            'language' => $request->input('language', 'en'),
-        ];
+        $dto = new UploadDocumentDTO(
+            companyId: $companyId,
+            userId: $user->id,
+            file: $request->file('file'),
+            title: $request->input('title'),
+            description: $request->input('description'),
+            tags: $request->input('tags', []),
+            language: $request->input('language', 'en'),
+            metadata: []
+        );
 
-        return $result = $this->documentService->uploadDocument($companyId, $userId, $request->file('file'), $metadata);
+        $resource = $this->documentService->uploadDocument($dto);
 
         // Log admin action
         $this->adminActionRepository->logAction(
@@ -49,15 +55,15 @@ class DocumentController extends Controller
             action: 'document.upload',
             targetCompanyId: $companyId,
             details: [
-                'document_title' => $metadata['title'] ?? $request->file('file')->getClientOriginalName(),
+                'document_title' => $dto->title ?? $request->file('file')->getClientOriginalName(),
                 'file_type' => $request->file('file')->getClientOriginalExtension(),
                 'file_size' => $request->file('file')->getSize(),
             ],
             request: $request
         );
 
-        return $this->respondSuccess(
-            $result,
+        return $this->respondResource(
+            $resource,
             'Document uploaded successfully',
             201
         );
@@ -67,14 +73,15 @@ class DocumentController extends Controller
     {
         $companyId = $request->attributes->get('current_company_id');
 
-        $filters = [
-            'status' => $request->query('status'),
-            'file_type' => $request->query('file_type'),
-            'search' => $request->query('search'),
-            'per_page' => $request->query('per_page', 20),
-        ];
+        $dto = new ListDocumentsDTO(
+            companyId: $companyId,
+            status: $request->query('status'),
+            fileType: $request->query('file_type'),
+            search: $request->query('search'),
+            perPage: (int) $request->query('per_page', 20)
+        );
 
-        $result = $this->documentService->listDocuments($companyId, $filters);
+        $resource = $this->documentService->listDocuments($dto);
 
         // Log admin action
         $this->adminActionRepository->logAction(
@@ -82,20 +89,29 @@ class DocumentController extends Controller
             action: 'document.list',
             targetCompanyId: $companyId,
             details: [
-                'filters' => $filters,
-                'result_count' => count($result['data'] ?? []),
+                'filters' => [
+                    'status' => $dto->status,
+                    'file_type' => $dto->fileType,
+                    'search' => $dto->search,
+                ],
+                'result_count' => $resource->collection->count(),
             ],
             request: $request
         );
 
-        return $this->respondSuccess($result);
+        return $this->respondResource($resource, 'Documents retrieved successfully');
     }
 
     public function show(Request $request, string $uuid): JsonResponse
     {
         $companyId = $request->attributes->get('current_company_id');
 
-        $result = $this->documentService->getDocument($companyId, $uuid);
+        $dto = new GetDocumentDTO(
+            companyId: $companyId,
+            documentUuid: $uuid
+        );
+
+        $resource = $this->documentService->getDocument($dto);
 
         // Log admin action
         $this->adminActionRepository->logAction(
@@ -104,13 +120,13 @@ class DocumentController extends Controller
             targetCompanyId: $companyId,
             details: [
                 'document_uuid' => $uuid,
-                'document_id' => $result['data']->id ?? null,
-                'document_title' => $result['data']->title ?? null,
+                'document_id' => $resource->id ?? null,
+                'document_title' => $resource->title ?? null,
             ],
             request: $request
         );
 
-        return $this->respondSuccess($result['data']);
+        return $this->respondResource($resource, 'Document retrieved successfully');
     }
 
     public function destroy(Request $request, string $uuid): JsonResponse
@@ -120,13 +136,19 @@ class DocumentController extends Controller
         // Get document info before deletion for logging
         $document = null;
         try {
-            $documentResult = $this->documentService->getDocument($companyId, $uuid);
-            $document = $documentResult['data'] ?? null;
+            $getDto = new GetDocumentDTO(companyId: $companyId, documentUuid: $uuid);
+            $documentResource = $this->documentService->getDocument($getDto);
+            $document = $documentResource->resource ?? null;
         } catch (\Exception $e) {
             // Document might not exist, continue with deletion attempt
         }
 
-        $this->documentService->deleteDocument($companyId, $uuid);
+        $deleteDto = new DeleteDocumentDTO(
+            companyId: $companyId,
+            documentUuid: $uuid
+        );
+
+        $this->documentService->deleteDocument($deleteDto);
 
         // Log admin action
         $this->adminActionRepository->logAction(
