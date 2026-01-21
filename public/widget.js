@@ -2,7 +2,7 @@
  * DocWise Chat Widget
  * A standalone embeddable chat widget for customer support with RAG-powered responses
  * 
- * @version 1.0.0
+ * @version 1.0.1
  * @license MIT
  */
 
@@ -856,6 +856,20 @@
             // Create container lazily
             if (!this.elements.container) {
                 this.createContainer();
+                
+                // Render any messages that were loaded before container was created
+                if (this.state.messages.length > 0) {
+                    // Clear welcome message
+                    const welcome = this.elements.messagesContainer.querySelector('.docwise-welcome');
+                    if (welcome) {
+                        welcome.remove();
+                    }
+                    
+                    // Render all existing messages
+                    this.state.messages.forEach(message => {
+                        this.renderMessage(message);
+                    });
+                }
             }
 
             this.elements.container.classList.add('open');
@@ -958,9 +972,9 @@
         }
 
         /**
-         * Add message to UI
+         * Render message to DOM (without adding to state)
          */
-        addMessage(message) {
+        renderMessage(message) {
             // Remove welcome message if exists
             const welcome = this.elements.messagesContainer.querySelector('.docwise-welcome');
             if (welcome) {
@@ -1007,9 +1021,17 @@
                 this.state.unreadCount++;
                 this.updateUnreadBadge();
             }
+        }
 
+        /**
+         * Add message to state and UI
+         */
+        addMessage(message) {
             // Store message in state
             this.state.messages.push(message);
+            
+            // Render to DOM
+            this.renderMessage(message);
         }
 
         /**
@@ -1240,13 +1262,13 @@
                         }
                     }
 
-                    // Add messages
+                    // Add messages to state and render if container exists
                     response.data.forEach(message => {
                         this.state.messages.push(message);
                         
                         // Only render if container is created
                         if (this.elements.messagesContainer) {
-                            this.addMessage(message);
+                            this.renderMessage(message);
                         }
                     });
                 }
@@ -1292,10 +1314,10 @@
         /**
          * Get version
          */
-        version: '1.0.0'
+        version: '1.0.1'
     };
 
     // Log ready state
-    console.log('DocWise Chat Widget loaded (v1.0.0)');
+    console.log('DocWise Chat Widget loaded (v1.0.1)');
 
 })();
