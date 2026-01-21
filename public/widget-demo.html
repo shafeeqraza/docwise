@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocWise Chat Widget - Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            color: #1F2937;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #6B7280;
+            margin-bottom: 30px;
+        }
+
+        .demo-section {
+            margin-top: 40px;
+        }
+
+        .demo-section h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #1F2937;
+        }
+
+        .config-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .config-option {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .config-option label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .config-option input,
+        .config-option select {
+            padding: 10px;
+            border: 1px solid #D1D5DB;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #3B82F6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563EB;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6B7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4B5563;
+        }
+
+        .btn-danger {
+            background: #EF4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #DC2626;
+        }
+
+        .info-box {
+            background: #EFF6FF;
+            border: 1px solid #BFDBFE;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+        }
+
+        .info-box h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #1E40AF;
+        }
+
+        .info-box p {
+            font-size: 14px;
+            color: #1E3A8A;
+            line-height: 1.6;
+        }
+
+        .code-block {
+            background: #1F2937;
+            color: #F9FAFB;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .warning-box {
+            background: #FEF3C7;
+            border: 1px solid #FCD34D;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 20px;
+        }
+
+        .warning-box h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #92400E;
+        }
+
+        .warning-box p {
+            font-size: 14px;
+            color: #78350F;
+            line-height: 1.6;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-ready {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .status-loading {
+            background: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        .content-section {
+            margin-bottom: 40px;
+            padding-bottom: 40px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .content-section:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>DocWise Chat Widget Demo <span class="status-indicator status-ready">Ready</span></h1>
+        <p class="subtitle">Test the standalone embeddable chat widget with live configuration</p>
+
+        <!-- Configuration Section -->
+        <div class="demo-section content-section">
+            <h2>Configuration</h2>
+            <div class="config-options">
+                <div class="config-option">
+                    <label for="apiUrl">API URL</label>
+                    <input type="text" id="apiUrl" value="" placeholder="http://localhost:8000">
+                </div>
+                <div class="config-option">
+                    <label for="apiKey">API Key</label>
+                    <input type="text" id="apiKey" value="" placeholder="dwc_live_abc123...">
+                </div>
+                <div class="config-option">
+                    <label for="position">Position</label>
+                    <select id="position">
+                        <option value="bottom-right">Bottom Right</option>
+                        <option value="bottom-left">Bottom Left</option>
+                        <option value="top-right">Top Right</option>
+                        <option value="top-left">Top Left</option>
+                    </select>
+                </div>
+                <div class="config-option">
+                    <label for="primaryColor">Primary Color</label>
+                    <input type="color" id="primaryColor" value="#3B82F6">
+                </div>
+                <div class="config-option">
+                    <label for="theme">Theme</label>
+                    <select id="theme">
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
+                <div class="config-option">
+                    <label for="greeting">Greeting Message</label>
+                    <input type="text" id="greeting" value="Hi! How can we help you?">
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="initializeWidget()">Initialize Widget</button>
+                <button class="btn btn-secondary" onclick="reinitializeWidget()">Reinitialize</button>
+                <button class="btn btn-danger" onclick="clearSession()">Clear Session</button>
+            </div>
+
+            <div class="info-box">
+                <h3>ℹ️ Instructions</h3>
+                <p>
+                    1. Enter your API URL (e.g., http://localhost:8000)<br>
+                    2. Enter a valid API key from your backend<br>
+                    3. Customize the appearance (optional)<br>
+                    4. Click "Initialize Widget" to load the chat widget<br>
+                    5. Look for the floating chat button in the corner you selected
+                </p>
+            </div>
+        </div>
+
+        <!-- Embed Code Section -->
+        <div class="demo-section content-section">
+            <h2>Embed Code</h2>
+            <p style="margin-bottom: 16px; color: #6B7280;">
+                Copy this code to embed the widget on your website:
+            </p>
+            <div class="code-block" id="embedCode">
+&lt;!-- DocWise Chat Widget --&gt;
+&lt;script src="<span id="widgetUrl">https://your-domain.com/widget.js</span>"&gt;&lt;/script&gt;
+&lt;script&gt;
+  DocWiseChat.init({
+    apiKey: '<span id="embedApiKey">YOUR_API_KEY</span>',
+    apiUrl: '<span id="embedApiUrl">https://your-domain.com</span>',
+    primaryColor: '<span id="embedColor">#3B82F6</span>',
+    position: '<span id="embedPosition">bottom-right</span>',
+    theme: '<span id="embedTheme">light</span>',
+    greeting: '<span id="embedGreeting">Hi! How can we help you?</span>'
+  });
+&lt;/script&gt;
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="demo-section content-section">
+            <h2>Features</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                <div style="padding: 20px; background: #F9FAFB; border-radius: 8px;">
+                    <h3 style="font-size: 16px; margin-bottom: 8px;">💬 Real-time Chat</h3>
+                    <p style="font-size: 14px; color: #6B7280;">Send and receive messages with RAG-powered AI responses</p>
+                </div>
+                <div style="padding: 20px; background: #F9FAFB; border-radius: 8px;">
+                    <h3 style="font-size: 16px; margin-bottom: 8px;">📚 Citations</h3>
+                    <p style="font-size: 14px; color: #6B7280;">View source documents for AI responses with similarity scores</p>
+                </div>
+                <div style="padding: 20px; background: #F9FAFB; border-radius: 8px;">
+                    <h3 style="font-size: 16px; margin-bottom: 8px;">👍 Feedback</h3>
+                    <p style="font-size: 14px; color: #6B7280;">Thumbs up/down buttons for response quality feedback</p>
+                </div>
+                <div style="padding: 20px; background: #F9FAFB; border-radius: 8px;">
+                    <h3 style="font-size: 16px; margin-bottom: 8px;">💾 Session Persistence</h3>
+                    <p style="font-size: 14px; color: #6B7280;">Chat history preserved across page reloads</p>
+                </div>
+                <div style="padding: 20px; background: #F9FAFB; border-radius: 8px;">
+                    <h3 style="font-size: 16px; margin-bottom: 8px;">🎨 Customizable</h3>
+                    <p style="font-size: 14px; color: #6B7280;">Custom colors, position, theme, and branding</p>
+                </div>
+                <div style="padding: 20px; background: #F9FAFB; border-radius: 8px;">
+                    <h3 style="font-size: 16px; margin-bottom: 8px;">📱 Responsive</h3>
+                    <p style="font-size: 14px; color: #6B7280;">Works perfectly on desktop and mobile devices</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testing Section -->
+        <div class="demo-section">
+            <h2>Testing Checklist</h2>
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="check1">
+                    <span>Widget button appears in correct position</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="check2">
+                    <span>Click button opens chat container</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="check3">
+                    <span>Send message works and receives AI response</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="check4">
+                    <span>Citations display correctly (if present)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="check5">
+                    <span>Feedback buttons work</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="check6">
+                    <span>Session persists after page reload</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="check7">
+                    <span>Mobile responsive (test on small screen)</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="check8">
+                    <span>Error handling works (invalid API key, network error)</span>
+                </label>
+            </div>
+
+            <div class="warning-box" style="margin-top: 24px;">
+                <h3>⚠️ Important Notes</h3>
+                <p>
+                    • Make sure your Laravel backend is running (php artisan serve)<br>
+                    • Ensure CORS is configured to allow requests from this origin<br>
+                    • You need a valid API key from the backend (create via API or admin panel)<br>
+                    • Check browser console for any errors<br>
+                    • Session data is stored in localStorage (check Application tab in DevTools)
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Widget Script -->
+    <script src="/widget.js"></script>
+
+    <!-- Demo Script -->
+    <script>
+        let widgetInstance = null;
+
+        // Get current origin for API URL
+        document.getElementById('apiUrl').value = window.location.origin;
+
+        function initializeWidget() {
+            const config = {
+                apiUrl: document.getElementById('apiUrl').value || window.location.origin,
+                apiKey: document.getElementById('apiKey').value,
+                position: document.getElementById('position').value,
+                primaryColor: document.getElementById('primaryColor').value,
+                theme: document.getElementById('theme').value,
+                greeting: document.getElementById('greeting').value
+            };
+
+            if (!config.apiKey) {
+                alert('Please enter an API key');
+                return;
+            }
+
+            // Update embed code
+            updateEmbedCode(config);
+
+            // Initialize widget
+            try {
+                widgetInstance = DocWiseChat.init(config);
+                if (widgetInstance) {
+                    console.log('Widget initialized successfully:', widgetInstance);
+                    alert('Widget initialized! Look for the chat button in the ' + config.position + ' corner.');
+                }
+            } catch (error) {
+                console.error('Widget initialization failed:', error);
+                alert('Failed to initialize widget: ' + error.message);
+            }
+        }
+
+        function reinitializeWidget() {
+            // Remove existing widget elements
+            const button = document.getElementById('docwise-chat-button');
+            const container = document.getElementById('docwise-chat-container');
+            const styles = document.getElementById('docwise-widget-styles');
+            
+            if (button) button.remove();
+            if (container) container.remove();
+            if (styles) styles.remove();
+
+            // Reinitialize
+            setTimeout(() => {
+                initializeWidget();
+            }, 100);
+        }
+
+        function clearSession() {
+            localStorage.removeItem('docwise-widget-session');
+            alert('Session cleared! Reload the page to start fresh.');
+        }
+
+        function updateEmbedCode(config) {
+            const widgetUrl = config.apiUrl + '/widget.js';
+            document.getElementById('widgetUrl').textContent = widgetUrl;
+            document.getElementById('embedApiKey').textContent = config.apiKey || 'YOUR_API_KEY';
+            document.getElementById('embedApiUrl').textContent = config.apiUrl;
+            document.getElementById('embedColor').textContent = config.primaryColor;
+            document.getElementById('embedPosition').textContent = config.position;
+            document.getElementById('embedTheme').textContent = config.theme;
+            document.getElementById('embedGreeting').textContent = config.greeting;
+        }
+
+        // Update embed code preview on input change
+        document.querySelectorAll('.config-option input, .config-option select').forEach(input => {
+            input.addEventListener('change', () => {
+                const config = {
+                    apiUrl: document.getElementById('apiUrl').value || window.location.origin,
+                    apiKey: document.getElementById('apiKey').value,
+                    position: document.getElementById('position').value,
+                    primaryColor: document.getElementById('primaryColor').value,
+                    theme: document.getElementById('theme').value,
+                    greeting: document.getElementById('greeting').value
+                };
+                updateEmbedCode(config);
+            });
+        });
+
+        // Initialize embed code preview
+        updateEmbedCode({
+            apiUrl: window.location.origin,
+            apiKey: 'YOUR_API_KEY',
+            position: 'bottom-right',
+            primaryColor: '#3B82F6',
+            theme: 'light',
+            greeting: 'Hi! How can we help you?'
+        });
+
+        // Log ready state
+        console.log('DocWise Widget Demo Page Ready');
+        console.log('Widget version:', DocWiseChat.version);
+    </script>
+</body>
+</html>
