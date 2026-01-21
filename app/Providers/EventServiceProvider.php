@@ -4,7 +4,7 @@ namespace App\Providers;
 
 use App\Events\DocumentUploaded;
 use App\Listeners\ProcessDocumentUploaded;
-use App\Models\Document as ModelsDocument;
+use App\Models\Document;
 use App\Observers\DocumentObserver;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
@@ -15,25 +15,13 @@ class EventServiceProvider extends ServiceProvider
      *
      * @var array<class-string, array<int, class-string>>
      */
-    protected $listen = [
-        DocumentUploaded::class => [
-            ProcessDocumentUploaded::class,
-        ],
-    ];
+    protected $listen = [];
 
     /**
      * Register any events for your application.
      */
     public function boot(): void
     {
-        ModelsDocument::observe(DocumentObserver::class);
-    }
-
-    /**
-     * Determine if events and listeners should be automatically discovered.
-     */
-    public function shouldDiscoverEvents(): bool
-    {
-        return false;
+        // Document::observe(DocumentObserver::class);
     }
 }

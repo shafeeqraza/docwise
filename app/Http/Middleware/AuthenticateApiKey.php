@@ -2,9 +2,7 @@
 
 namespace App\Http\Middleware;
 
-use App\Services\V1\Contracts\ApiKeyServiceInterface;
-use App\Exceptions\AuthenticationException;
-use App\Services\V1\Company\ApiKeyUsageService;
+use App\Models\CompanyApiKey;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,88 +10,95 @@ use Symfony\Component\HttpFoundation\Response;
 class AuthenticateApiKey
 {
     /**
-     * Create a new middleware instance.
-     *
-     * @param ApiKeyServiceInterface $apiKeyService
-     * @param ApiKeyUsageService $usageService
-     */
-    public function __construct(
-        private readonly ApiKeyServiceInterface $apiKeyService,
-        private readonly ApiKeyUsageService $usageService
-    ) {}
-
-    /**
      * Handle an incoming request.
      *
      * @param Request $request
      * @param Closure $next
      * @return Response
-     * @throws AuthenticationException
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Get API key from Authorization header or X-API-Key header
-        $apiKey = $this->extractApiKey($request);
+        // Extract API key from headers
+        $apiKey = $request->bearerToken() ?? $request->header('X-API-Key');
 
         if (!$apiKey) {
-            throw new AuthenticationException('API key is required. Please provide it in the Authorization header as "Bearer {key}" or in the X-API-Key header.', 401);
+            return response()->json([
+                'error' => 'API key is required',
+                'message' => 'Please provide an API key via Authorization header (Bearer token) or X-API-Key header'
+            ], 401);
         }
 
-        // Validate API key
-        $apiKeyModel = $this->apiKeyService->validateApiKey($apiKey);
+        // Hash the API key to look it up
+        $keyHash = hash('sha256', $apiKey);
 
-        if (!$apiKeyModel) {
-            throw new AuthenticationException('Invalid or expired API key.', 401);
+        // Find the API key
+        $apiKeyRecord = CompanyApiKey::where('key_hash', '=', $keyHash)->first();
+
+        if (!$apiKeyRecord) {
+            return response()->json([
+                'error' => 'Invalid API key',
+                'message' => 'The provided API key is invalid'
+            ], 401);
         }
 
-        // Check if company is active
-        if (!$apiKeyModel->company->isActive()) {
-            throw new AuthenticationException('Company account is not active.', 403);
+        // Check if key is active
+        if (!$apiKeyRecord->is_active) {
+            return response()->json([
+                'error' => 'API key is inactive',
+                'message' => 'This API key has been deactivated'
+            ], 403);
         }
 
-        // Set company context for the request
-        $request->attributes->add(['current_company_id' => $apiKeyModel->company_id]);
-        $request->attributes->add(['api_key' => $apiKeyModel]);
-        $request->attributes->add(['authenticated_company' => $apiKeyModel->company]);
-
-        // Check permissions if needed
-        $requiredPermission = $request->route()?->getAction('permission');
-        if ($requiredPermission && !$apiKeyModel->hasPermission($requiredPermission)) {
-            throw new AuthenticationException('API key does not have the required permission: ' . $requiredPermission, 403);
+        // Check if key is expired
+        if ($apiKeyRecord->isExpired()) {
+            return response()->json([
+                'error' => 'API key has expired',
+                'message' => 'This API key has expired'
+            ], 403);
         }
 
-        // Check rate limits
-        $rateLimitCheck = $this->usageService->checkRateLimit($apiKeyModel);
-        if (!$rateLimitCheck['allowed']) {
-            throw AuthenticationException::tooManyAttempts(0);
-        }
+        // Validate domain restriction
+        // Extract domain from Origin (preferred) or Referer header
+        $origin = $request->header('Origin') ?? $request->header('Referer');
 
-        // Track usage
-        $this->usageService->trackUsage($apiKeyModel);
+        // if ($origin) {
+        //     // Validate domain from Origin/Referer header
+        //     if (!$apiKeyRecord->isDomainAllowed($origin)) {
+        //         return response()->json([
+        //             'error' => 'Domain not allowed',
+        //             'message' => 'This API key is not authorized for the requesting domain'
+        //         ], 403);
+        //     }
+        // } else {
+        //     // For direct API calls without Origin/Referer, allow if X-Allowed-Domain header is provided
+        //     // This supports server-to-server API calls
+        //     $domain = $request->header('X-Allowed-Domain');
+        //     if ($domain && !$apiKeyRecord->isDomainAllowed($domain)) {
+        //         return response()->json([
+        //             'error' => 'Domain not allowed',
+        //             'message' => 'This API key is not authorized for the specified domain'
+        //         ], 403);
+        //     }
+        //     // If no origin and no X-Allowed-Domain, reject for security
+        //     // Widget requests should always have Origin header
+        //     if (!$domain) {
+        //         return response()->json([
+        //             'error' => 'Domain validation required',
+        //             'message' => 'Origin header or X-Allowed-Domain header is required for domain validation'
+        //         ], 403);
+        //     }
+        // }
+
+        // Check permissions (if needed in the future)
+        // For now, we'll allow all requests if key is valid
+
+        // Update last used timestamp
+        $apiKeyRecord->updateLastUsed();
+
+        // Set company context in request attributes
+        $request->attributes->add(['current_company_id' => $apiKeyRecord->company_id]);
+        $request->attributes->add(['api_key' => $apiKeyRecord]);
 
         return $next($request);
-    }
-
-    /**
-     * Extract API key from request headers.
-     *
-     * @param Request $request
-     * @return string|null
-     */
-    private function extractApiKey(Request $request): ?string
-    {
-        // Try Authorization header first (Bearer token format)
-        $authHeader = $request->header('Authorization');
-        if ($authHeader && preg_match('/Bearer\s+(.+)/i', $authHeader, $matches)) {
-            return trim($matches[1]);
-        }
-
-        // Try X-API-Key header
-        $apiKeyHeader = $request->header('X-API-Key');
-        if ($apiKeyHeader) {
-            return trim($apiKeyHeader);
-        }
-
-        return null;
     }
 }

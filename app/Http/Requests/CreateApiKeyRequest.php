@@ -65,6 +65,12 @@ class CreateApiKeyRequest extends FormRequest
                 'date',
                 'after:now',
             ],
+            'allowed_domain' => [
+                'required',
+                'string',
+                'max:255',
+                // 'regex:/^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i',
+            ],
         ];
     }
 
@@ -90,6 +96,8 @@ class CreateApiKeyRequest extends FormRequest
             'is_active.boolean' => 'Is active must be a boolean value',
             'expires_at.date' => 'Expires at must be a valid date',
             'expires_at.after' => 'Expires at must be in the future',
+            'allowed_domain.required' => 'Allowed domain is required',
+            'allowed_domain.regex' => 'Allowed domain must be a valid domain name (e.g., example.com)',
         ];
     }
 

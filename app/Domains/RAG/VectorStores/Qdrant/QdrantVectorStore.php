@@ -64,16 +64,11 @@ class QdrantVectorStore implements VectorStore
                 throw new QdrantException('Failed to create Qdrant collection: ' . $createResponse->body());
             }
 
-            // Create index for company_id filtering
-            $createIndexUrl = $this->buildQdrantUrl("/collections/{$collectionName}/index");
-            $createIndexResponse = Http::withHeaders($headers)->put($createIndexUrl, [
-                'field_name' => 'company_id',
-                'field_schema' => 'keyword',
-            ]);
+            // Create payload index for company_id filtering
+            $this->createPayloadIndex($collectionName, 'company_id', 'integer');
 
-            if (!$createIndexResponse->successful()) {
-                throw new QdrantException('Failed to create Qdrant index: ' . $createIndexResponse->body());
-            }
+            // Create payload index for document_id filtering (for deletion)
+            $this->createPayloadIndex($collectionName, 'document_id', 'integer');
 
             return true;
         } catch (\Exception $e) {
@@ -210,10 +205,16 @@ class QdrantVectorStore implements VectorStore
 
             foreach ($results['result'] ?? [] as $point) {
                 $payload = $point['payload'] ?? [];
+                $score = $point['score'] ?? 0.0;
+
+                // Add similarity score to metadata
+                $metadata = $payload;
+                $metadata['similarity_score'] = $score;
+
                 $chunks[] = new ChunkDTO(
                     content: $payload['content'] ?? '',
                     index: $payload['chunk_index'] ?? 0,
-                    metadata: $payload,
+                    metadata: $metadata,
                     tokens: $payload['token_count'] ?? null,
                     embedding: null, // Not returned in search results
                     id: $payload['chunk_id'] ?? null,
@@ -273,6 +274,53 @@ class QdrantVectorStore implements VectorStore
             $this->logService->error('Qdrant delete failed', [
                 'collection' => $collectionName,
                 'document_id' => $documentId,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * Create a payload index for filtering.
+     *
+     * @param string $collectionName The collection name
+     * @param string $fieldName The field name to index
+     * @param string $fieldType The field type (keyword, integer, float, geo, text)
+     * @return bool True if successful
+     */
+    private function createPayloadIndex(string $collectionName, string $fieldName, string $fieldType = 'keyword'): bool
+    {
+        $apiKey = config('qdrant.api_key');
+
+        try {
+            $url = $this->buildQdrantUrl("/collections/{$collectionName}/index");
+            $headers = $apiKey ? ['api-key' => $apiKey] : [];
+
+            $response = Http::withHeaders($headers)->put($url, [
+                'field_name' => $fieldName,
+                'field_schema' => $fieldType,
+            ]);
+
+            if (!$response->successful()) {
+                $this->logService->warning('Failed to create Qdrant payload index', [
+                    'collection' => $collectionName,
+                    'field' => $fieldName,
+                    'error' => $response->body(),
+                ]);
+                return false;
+            }
+
+            $this->logService->info('Created Qdrant payload index', [
+                'collection' => $collectionName,
+                'field' => $fieldName,
+                'type' => $fieldType,
+            ]);
+
+            return true;
+        } catch (\Exception $e) {
+            $this->logService->warning('Failed to create Qdrant payload index', [
+                'collection' => $collectionName,
+                'field' => $fieldName,
                 'error' => $e->getMessage(),
             ]);
             return false;

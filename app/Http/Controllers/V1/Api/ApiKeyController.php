@@ -97,6 +97,7 @@ class ApiKeyController extends Controller
                 companyId: $company->id,
                 userId: $user->id,
                 name: $validated['name'],
+                allowedDomain: $validated['allowed_domain'],
                 rateLimitPerMinute: $validated['rate_limit_per_minute'] ?? null,
                 rateLimitPerHour: $validated['rate_limit_per_hour'] ?? null,
                 isActive: $validated['is_active'] ?? true,
@@ -142,6 +143,7 @@ class ApiKeyController extends Controller
             $validated = $request->validated();
             $updateDto = new UpdateApiKeyDTO(
                 name: $validated['name'] ?? null,
+                allowedDomain: $validated['allowed_domain'] ?? null,
                 rateLimitPerMinute: $validated['rate_limit_per_minute'] ?? null,
                 rateLimitPerHour: $validated['rate_limit_per_hour'] ?? null,
                 isActive: $validated['is_active'] ?? null,

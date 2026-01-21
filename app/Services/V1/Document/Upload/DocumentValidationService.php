@@ -3,6 +3,7 @@
 namespace App\Services\V1\Document\Upload;
 
 use App\Models\Document;
+use App\Exceptions\DocumentValidationException;
 
 class DocumentValidationService
 {
@@ -17,7 +18,7 @@ class DocumentValidationService
             ->first();
 
         if ($existing) {
-            throw new \InvalidArgumentException('Duplicate document detected (same file already uploaded)');
+            throw new DocumentValidationException('Duplicate document detected (same file already uploaded)');
         }
     }
 }

@@ -20,6 +20,18 @@ class EmbeddingService
     ) {}
 
     /**
+     * Generate embedding for a single text.
+     *
+     * @param string $text The text to generate embedding for
+     * @param string $model The embedding model to use
+     * @return EmbeddingDTO The embedding DTO
+     */
+    public function generateEmbedding(string $text, string $model): EmbeddingDTO
+    {
+        return $this->embeddingProvider->generateEmbedding($text, $model);
+    }
+
+    /**
      * Generate embeddings for multiple chunks in batch.
      *
      * @param array $chunks Array of DocumentChunk models
@@ -74,6 +86,18 @@ class EmbeddingService
         }
 
         return $results;
+    }
+
+    /**
+     * Generate embedding for a single text.
+     *
+     * @param string $text The text to generate embedding for
+     * @param string $model The embedding model to use
+     * @return EmbeddingDTO The embedding DTO
+     */
+    public function generateEmbedding(string $text, string $model): EmbeddingDTO
+    {
+        return $this->embeddingProvider->generateEmbedding($text, $model);
     }
 
     /**

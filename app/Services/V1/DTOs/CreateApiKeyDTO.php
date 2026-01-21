@@ -11,6 +11,7 @@ readonly class CreateApiKeyDTO
         public int $companyId,
         public int $userId,
         public string $name,
+        public string $allowedDomain,
         public ?int $rateLimitPerMinute = 60,
         public ?int $rateLimitPerHour = 1000,
         public bool $isActive = true,

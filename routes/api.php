@@ -67,11 +67,11 @@ Route::prefix('superadmin')->middleware(['auth:sanctum', 'superadmin'])->group(f
         // Get list of companies available for impersonation
         Route::get('/companies', [SuperAdminImpersonationController::class, 'getCompanies'])
             ->name('superadmin.impersonate.companies');
-        
+
         // Validate company (helper endpoint)
         Route::get('/{company}/validate', [SuperAdminImpersonationController::class, 'validateCompany'])
             ->name('superadmin.impersonate.validate');
-        
+
         // Get current impersonation status
         Route::get('/status', [SuperAdminImpersonationController::class, 'getStatus'])
             ->name('superadmin.impersonate.status');
@@ -82,13 +82,13 @@ Route::prefix('superadmin')->middleware(['auth:sanctum', 'superadmin'])->group(f
 Route::prefix('documents')->middleware(['auth:sanctum', 'company.scope'])->group(function () {
     Route::post('/', [DocumentController::class, 'upload'])
         ->name('documents.upload');
-    
+
     Route::get('/', [DocumentController::class, 'index'])
         ->name('documents.index');
-    
+
     Route::get('/{uuid}', [DocumentController::class, 'show'])
         ->name('documents.show');
-    
+
     Route::delete('/{uuid}', [DocumentController::class, 'destroy'])
         ->name('documents.destroy');
 });
@@ -98,24 +98,33 @@ Route::prefix('api-keys')->middleware(['auth:sanctum', 'company.scope', 'company
     // List all API keys for the company
     Route::get('/', [ApiKeyController::class, 'index'])
         ->name('api-keys.index');
-    
+
     // Create new API key
     Route::post('/', [ApiKeyController::class, 'store'])
         ->name('api-keys.store');
-    
+
     // Get API key by ID or UUID
     Route::get('/{apiKey}', [ApiKeyController::class, 'show'])
         ->name('api-keys.show');
-    
+
     // Update API key
     Route::put('/{apiKey}', [ApiKeyController::class, 'update'])
         ->name('api-keys.update');
-    
+
     // Delete (revoke) API key
     Route::delete('/{apiKey}', [ApiKeyController::class, 'destroy'])
         ->name('api-keys.destroy');
-    
+
     // Regenerate API key
     Route::post('/{apiKey}/regenerate', [ApiKeyController::class, 'regenerate'])
         ->name('api-keys.regenerate');
 });
+
+// Widget API routes (requires API key authentication and rate limiting)
+Route::prefix('widget')
+    ->middleware(['api.key', 'api.rate_limit'])
+    ->group(function () {
+        Route::post('/chat', [\App\Http\Controllers\V1\Api\WidgetChatController::class, 'chat']);
+        Route::get('/sessions/{session}/messages', [\App\Http\Controllers\V1\Api\WidgetChatController::class, 'getMessages']);
+        Route::post('/sessions/{session}/feedback', [\App\Http\Controllers\V1\Api\WidgetChatController::class, 'submitFeedback']);
+    });

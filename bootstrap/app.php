@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.cookie' => \App\Http\Middleware\AuthenticateWithCookie::class,
             'company.scope' => \App\Http\Middleware\ResolveCompany::class,
             'api.key' => \App\Http\Middleware\AuthenticateApiKey::class,
+            'api.rate_limit' => \App\Http\Middleware\RateLimitApiKey::class,
         ]);
 
         // Add cookie authentication middleware to API routes

@@ -84,8 +84,9 @@ class ApiKeyService implements ApiKeyServiceInterface
             'key_hash' => $keyData['hash'],
             'key_prefix' => $keyData['prefix'],
             'permissions' => ['widget:chat'],
-            'rate_limit_per_minute' => $dto->rateLimitPerMinute,
-            'rate_limit_per_hour' => $dto->rateLimitPerHour,
+            'allowed_domain' => $dto->allowedDomain,
+            'rate_limit_per_minute' => $dto->rateLimitPerMinute ?? 60,
+            'rate_limit_per_hour' => $dto->rateLimitPerHour ?? 100,
             'is_active' => $dto->isActive,
             'expires_at' => $dto->expiresAt,
             'created_by' => $dto->userId,
@@ -112,6 +113,7 @@ class ApiKeyService implements ApiKeyServiceInterface
 
         $updateData = array_filter([
             'name' => $dto->name,
+            'allowed_domain' => $dto->allowedDomain,
             'rate_limit_per_minute' => $dto->rateLimitPerMinute,
             'rate_limit_per_hour' => $dto->rateLimitPerHour,
             'is_active' => $dto->isActive,

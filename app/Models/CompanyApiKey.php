@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class CompanyApiKey extends Model
@@ -18,6 +19,7 @@ class CompanyApiKey extends Model
         'key_hash',
         'key_prefix',
         'permissions',
+        'allowed_domain',
         'rate_limit_per_minute',
         'rate_limit_per_hour',
         'is_active',
@@ -56,6 +58,11 @@ class CompanyApiKey extends Model
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function usageLogs(): HasMany
+    {
+        return $this->hasMany(ApiKeyUsageLog::class, 'api_key_id');
     }
 
     // Helper methods
@@ -131,11 +138,90 @@ class CompanyApiKey extends Model
         if (!$this->permissions) {
             return 'No permissions';
         }
-
+        
         if (in_array('*', $this->permissions)) {
             return 'All permissions';
         }
-
+        
         return implode(', ', $this->permissions);
+    }
+
+    public function isDomainAllowed(string $domain): bool
+    {
+        // Normalize domains for comparison (lowercase, remove protocol/port)
+        $normalizedDomain = $this->normalizeDomain($domain);
+        $normalizedAllowed = $this->normalizeDomain($this->allowed_domain);
+
+        // Exact match (case-insensitive)
+        return $normalizedDomain === $normalizedAllowed;
+    }
+
+    private function normalizeDomain(string $domain): string
+    {
+        // Remove protocol if present
+        $domain = preg_replace('#^https?://#', '', $domain);
+
+        // Remove port if present
+        $domain = preg_replace('#:\d+$#', '', $domain);
+
+        // Remove trailing slash
+        $domain = rtrim($domain, '/');
+
+        // Convert to lowercase
+        return strtolower($domain);
+    }
+
+    /**
+     * Get usage count for a period.
+     *
+     * @param string $period Period: 'today', 'week', 'month', 'year', or 'all'
+     * @return int Usage count
+     */
+    public function getUsageCount(string $period = 'month'): int
+    {
+        $query = $this->usageLogs();
+
+        match ($period) {
+            'today' => $query->whereDate('created_at', now()->today()),
+            'week' => $query->where('created_at', '>=', now()->subWeek()),
+            'month' => $query->where('created_at', '>=', now()->subMonth()),
+            'year' => $query->where('created_at', '>=', now()->subYear()),
+            'all' => null, // No filter
+            default => $query->where('created_at', '>=', now()->subMonth()),
+        };
+
+        return $query->count();
+    }
+
+    /**
+     * Get token usage for a period.
+     *
+     * @param string $period Period: 'today', 'week', 'month', 'year', or 'all'
+     * @return array<string, int> Token usage statistics
+     */
+    public function getTokenUsage(string $period = 'month'): array
+    {
+        $query = $this->usageLogs();
+
+        match ($period) {
+            'today' => $query->whereDate('created_at', now()->today()),
+            'week' => $query->where('created_at', '>=', now()->subWeek()),
+            'month' => $query->where('created_at', '>=', now()->subMonth()),
+            'year' => $query->where('created_at', '>=', now()->subYear()),
+            'all' => null, // No filter
+            default => $query->where('created_at', '>=', now()->subMonth()),
+        };
+
+        $stats = $query->selectRaw('
+            SUM(tokens_prompt) as total_prompt,
+            SUM(tokens_completion) as total_completion,
+            SUM(tokens_prompt + tokens_completion) as total
+        ')->first();
+
+        return [
+            'tokens_prompt' => (int) ($stats->total_prompt ?? 0),
+            'tokens_completion' => (int) ($stats->total_completion ?? 0),
+            'tokens_total' => (int) ($stats->total ?? 0),
+        ];
     }
 }

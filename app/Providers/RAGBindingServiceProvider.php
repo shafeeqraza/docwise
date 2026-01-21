@@ -8,6 +8,7 @@ use App\Domains\RAG\Embeddings\Gemini\GeminiEmbeddingProvider;
 use App\Domains\RAG\Factories\DocumentLoaderFactory;
 use App\Domains\RAG\Factories\EmbeddingProviderFactory;
 use App\Domains\RAG\Factories\TokenizerFactory;
+use App\Domains\RAG\Pipelines\ChatRAGPipeline;
 use App\Domains\RAG\VectorStores\Qdrant\QdrantVectorStore;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,5 +27,9 @@ class RAGBindingServiceProvider extends ServiceProvider
         $this->app->singleton(DocumentLoaderFactory::class);
         $this->app->singleton(EmbeddingProviderFactory::class);
         $this->app->singleton(TokenizerFactory::class);
+        $this->app->singleton(\App\Domains\RAG\Factories\LLMProviderFactory::class);
+
+        // Bind RAG pipelines as singletons
+        $this->app->singleton(ChatRAGPipeline::class);
     }
 }

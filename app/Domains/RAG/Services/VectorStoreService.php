@@ -92,6 +92,33 @@ class VectorStoreService
     }
 
     /**
+     * Search for similar vectors.
+     *
+     * @param array<int> $queryVector The query vector
+     * @param int $limit Maximum number of results to return
+     * @param array<string, mixed> $filters Optional filters (e.g., company_id, document_id)
+     * @return array<ChunkDTO> Array of matching chunks
+     * @throws QdrantException If search operation fails
+     */
+    public function search(array $queryVector, int $limit = 10, array $filters = []): array
+    {
+        try {
+            return $this->vectorStore->search($queryVector, $limit, $filters);
+        } catch (RAGQdrantException $e) {
+            throw new QdrantException($e->getMessage(), $e->getCode(), $e);
+        } catch (\Exception $e) {
+            $this->logService->error('Vector store search failed', [
+                'error' => $e->getMessage(),
+            ]);
+            throw new QdrantException(
+                "Failed to search vectors: {$e->getMessage()}",
+                0,
+                $e
+            );
+        }
+    }
+
+    /**
      * Delete chunks from Qdrant by document ID.
      *
      * @param int $documentId The document ID

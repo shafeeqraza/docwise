@@ -4,12 +4,9 @@ namespace App\Listeners;
 
 use App\Events\DocumentUploaded;
 use App\Jobs\ProcessDocument;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
 
-class ProcessDocumentUploaded implements ShouldQueue
+class ProcessDocumentUploaded
 {
     use InteractsWithQueue;
 
@@ -30,9 +27,9 @@ class ProcessDocumentUploaded implements ShouldQueue
         // Use unique() with ingestion_job_id as key to prevent duplicate jobs
         // This ensures only one ProcessDocument job is queued per ingestion job
         ProcessDocument::dispatch(
-            $event->document->id,
-            $event->version->id,
-            $event->ingestionJob->id
-        )->unique("process_document_{$event->ingestionJob->id}");
+            $event->document,
+            $event->version,
+            $event->ingestionJob
+        );
     }
 }
