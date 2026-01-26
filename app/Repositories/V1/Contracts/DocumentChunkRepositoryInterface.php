@@ -53,4 +53,29 @@ interface DocumentChunkRepositoryInterface
      * @return bool True if successful
      */
     public function deleteByDocumentId(int $documentId): bool;
+
+    /**
+     * Batch update chunk metadata.
+     *
+     * @param array<int, array> $updates Map of chunk ID to metadata updates
+     * @return int Number of chunks updated
+     */
+    public function batchUpdateMetadata(array $updates): int;
+
+    /**
+     * Batch update Qdrant point IDs.
+     *
+     * @param array<int, string> $updates Map of chunk ID to Qdrant point ID
+     * @param string $collectionName The Qdrant collection name
+     * @return int Number of chunks updated
+     */
+    public function batchUpdateQdrantIds(array $updates, string $collectionName = 'documents'): int;
+
+    /**
+     * Batch update multiple fields for chunks.
+     *
+     * @param array<int, array> $updates Map of chunk ID to field updates
+     * @return int Number of chunks updated
+     */
+    public function batchUpdate(array $updates): int;
 }
