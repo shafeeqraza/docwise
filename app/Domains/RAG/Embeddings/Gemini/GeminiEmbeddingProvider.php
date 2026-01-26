@@ -7,7 +7,6 @@ use App\Domains\RAG\DTOs\EmbeddingDTO;
 use App\Domains\RAG\Embeddings\Concerns\RetriesEmbeddingRequests;
 use App\Domains\RAG\Exceptions\EmbeddingFailedException;
 use App\Services\V1\Common\LogService;
-use Illuminate\Support\Facades\Http;
 
 /**
  * Gemini embedding provider implementation.
@@ -25,20 +24,19 @@ class GeminiEmbeddingProvider implements EmbeddingProvider
     protected const DEFAULT_RETRIES = 5;
     protected const DEFAULT_BATCH_DELAY = 200000; // 0.2s in microseconds
 
-    protected string $apiKey;
-    protected string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
-    protected int $timeout;
     protected int $batchSize;
     protected int $maxRetries;
 
-    public function __construct(?LogService $logService = null)
-    {
-        $this->apiKey = config('services.gemini.api_key');
-        if (!$this->apiKey) {
-            throw new EmbeddingFailedException('Gemini API key not configured');
-        }
-
-        $this->timeout = config('services.gemini.timeout', 60);
+    /**
+     * Create a new Gemini embedding provider instance.
+     *
+     * @param Gemini $gemini The Gemini HTTP client
+     * @param LogService|null $logService The log service
+     */
+    public function __construct(
+        private readonly Gemini $gemini,
+        ?LogService $logService = null
+    ) {
         $this->batchSize = config('services.gemini.batch_size', self::DEFAULT_BATCH_SIZE);
         $this->maxRetries = config('services.gemini.max_retries', self::DEFAULT_RETRIES);
         
@@ -71,18 +69,6 @@ class GeminiEmbeddingProvider implements EmbeddingProvider
         return str_replace('models/', '', $model);
     }
 
-    /**
-     * Get default HTTP headers for API requests.
-     *
-     * @return array
-     */
-    protected function getDefaultHeaders(): array
-    {
-        return [
-            'x-goog-api-key' => $this->apiKey,
-            'Content-Type' => 'application/json',
-        ];
-    }
 
     /**
      * Generate embedding for a single text.
@@ -205,27 +191,17 @@ class GeminiEmbeddingProvider implements EmbeddingProvider
      */
     protected function makeEmbedContentRequest(string $text, string $model): \Illuminate\Http\Client\Response
     {
-        $response = Http::timeout($this->timeout)
-            ->withHeaders($this->getDefaultHeaders())
-            ->post("{$this->baseUrl}/{$model}:embedContent", [
-                'model' => $model,
-                'content' => [
-                    'parts' => [
-                        [
-                            'text' => $text
-                        ]
+        return $this->gemini->post("{$model}:embedContent", [
+            'model' => $model,
+            'content' => [
+                'parts' => [
+                    [
+                        'text' => $text
                     ]
-                ],
-                'output_dimensionality' => 1536
-            ]);
-
-        if (!$response->successful()) {
-            throw new EmbeddingFailedException(
-                "Gemini API request failed: {$response->status()} - {$response->body()}"
-            );
-        }
-
-        return $response;
+                ]
+            ],
+            'output_dimensionality' => 1536
+        ]);
     }
 
     /**
@@ -240,19 +216,9 @@ class GeminiEmbeddingProvider implements EmbeddingProvider
     {
         $modelName = $this->getModelNameForEndpoint($model);
 
-        $response = Http::timeout($this->timeout)
-            ->withHeaders($this->getDefaultHeaders())
-            ->post("{$this->baseUrl}/models/{$modelName}:batchEmbedContents", [
-                'requests' => $requests
-            ]);
-
-        if (!$response->successful()) {
-            throw new EmbeddingFailedException(
-                "Gemini batch API request failed: {$response->status()} - {$response->body()}"
-            );
-        }
-
-        return $response;
+        return $this->gemini->post("models/{$modelName}:batchEmbedContents", [
+            'requests' => $requests
+        ]);
     }
 
     /**
