@@ -6,14 +6,15 @@ use App\Domains\RAG\Contracts\VectorStore;
 use App\Domains\RAG\DTOs\ChunkDTO;
 use App\Domains\RAG\DTOs\DocumentDTO;
 use App\Domains\RAG\Exceptions\EmbeddingFailedException;
-use App\Domains\RAG\Exceptions\QdrantException;
 use App\Domains\RAG\Exceptions\TextExtractionException;
+use App\Domains\RAG\Exceptions\VectorStoreException;
 use App\Domains\RAG\Factories\DocumentLoaderFactory;
 use App\Domains\RAG\Factories\EmbeddingProviderFactory;
 use App\Domains\RAG\Services\TextChunkingService;
 use App\Domains\RAG\Services\UsageMetricService;
 use App\Domains\RAG\Validators\TokenLimitValidator;
 use App\Repositories\V1\Contracts\DocumentChunkRepositoryInterface;
+use App\Services\V1\Common\LogService;
 
 /**
  * Document ingestion pipeline that orchestrates the RAG workflow.
@@ -26,6 +27,8 @@ use App\Repositories\V1\Contracts\DocumentChunkRepositoryInterface;
  */
 class DocumentIngestionPipeline
 {
+    private int $lastBenchmarkDuration = 0;
+
     public function __construct(
         private DocumentLoaderFactory $loaderFactory,
         private TextChunkingService $chunkingService,
@@ -33,7 +36,8 @@ class DocumentIngestionPipeline
         private VectorStore $vectorStore,
         private DocumentChunkRepositoryInterface $chunkRepository,
         private TokenLimitValidator $tokenLimitValidator,
-        private UsageMetricService $usageMetricService
+        private UsageMetricService $usageMetricService,
+        private LogService $logService
     ) {}
 
     /**
@@ -50,45 +54,82 @@ class DocumentIngestionPipeline
     {
         $totalSteps = 8;
         $currentStep = 0;
+        $overallStartTime = microtime(true);
+        $stepTimings = [];
 
         // Step 1: Load document text
         $this->updateProgress($options, ++$currentStep, $totalSteps, 'Loading document');
-        $text = $this->loadDocument($document);
+        $text = $this->benchmarkStep('Loading document', function() use ($document) {
+            return $this->loadDocument($document);
+        }, ['file_type' => $document->fileType]);
+        $stepTimings['Loading document'] = $this->getLastBenchmarkDuration();
 
         // Step 2: Chunk text using TextChunkingService (returns ChunkDTOs without IDs)
         $this->updateProgress($options, ++$currentStep, $totalSteps, 'Chunking text');
-        $chunkDTOs = $this->chunkingService->chunkText($text, $document, $options);
+        $chunkDTOs = $this->benchmarkStep('Chunking text', function() use ($text, $document, $options) {
+            return $this->chunkingService->chunkText($text, $document, $options);
+        }, ['text_length' => strlen($text)]);
+        $stepTimings['Chunking text'] = $this->getLastBenchmarkDuration();
+        $chunkCount = count($chunkDTOs);
 
         // Step 3: Persist chunks to MySQL and update DTOs with IDs and UUIDs
         $this->updateProgress($options, ++$currentStep, $totalSteps, 'Persisting chunks');
-        $chunkDTOs = $this->persistChunksAndUpdateDTOs($chunkDTOs, $options);
+        $chunkDTOs = $this->benchmarkStep('Persisting chunks', function() use ($chunkDTOs, $options) {
+            return $this->persistChunksAndUpdateDTOs($chunkDTOs, $options);
+        }, ['chunk_count' => $chunkCount]);
+        $stepTimings['Persisting chunks'] = $this->getLastBenchmarkDuration();
 
         // Step 4: Validate token limit before generating embeddings
         $this->updateProgress($options, ++$currentStep, $totalSteps, 'Validating token limits');
         $companyId = $options['company_id'] ?? null;
         if ($companyId) {
-            $this->tokenLimitValidator->validate($companyId, $chunkDTOs);
+            $totalTokens = array_sum(array_map(fn($chunk) => $chunk->tokens, $chunkDTOs));
+            $this->benchmarkStep('Validating token limits', function() use ($companyId, $chunkDTOs) {
+                $this->tokenLimitValidator->validate($companyId, $chunkDTOs);
+            }, ['total_tokens' => $totalTokens]);
+            $stepTimings['Validating token limits'] = $this->getLastBenchmarkDuration();
+        } else {
+            $stepTimings['Validating token limits'] = 0;
         }
 
         // Step 5: Generate embeddings for chunks
         $this->updateProgress($options, ++$currentStep, $totalSteps, 'Generating embeddings');
-        $embeddings = $this->generateEmbeddings($chunkDTOs, $options);
+        $embeddingModel = $options['embedding_model'] ?? 'models/gemini-embedding-001';
+        $embeddings = $this->benchmarkStep('Generating embeddings', function() use ($chunkDTOs, $options) {
+            return $this->generateEmbeddings($chunkDTOs, $options);
+        }, ['chunk_count' => $chunkCount, 'embedding_model' => $embeddingModel]);
+        $stepTimings['Generating embeddings'] = $this->getLastBenchmarkDuration();
 
-        $chunksWithEmbeddings = $this->mapEmbeddingsToChunks($chunkDTOs, $embeddings);
+        $chunksWithEmbeddings = $this->benchmarkStep('Map embeddings to chunks', function() use ($chunkDTOs, $embeddings) {
+            return $this->mapEmbeddingsToChunks($chunkDTOs, $embeddings);
+        }, ['chunk_count' => $chunkCount]);
+        $stepTimings['Map embeddings to chunks'] = $this->getLastBenchmarkDuration();
 
         // Step 6: Store vectors in vector store
         $this->updateProgress($options, ++$currentStep, $totalSteps, 'Storing vectors');
-        $this->storeVectors($chunksWithEmbeddings);
+        $vectorDimension = !empty($chunksWithEmbeddings) ? ($chunksWithEmbeddings[0]->embedding?->dimension ?? 1536) : 1536;
+        $this->benchmarkStep('Storing vectors', function() use ($chunksWithEmbeddings) {
+            $this->storeVectors($chunksWithEmbeddings);
+        }, ['chunk_count' => $chunkCount, 'vector_dimension' => $vectorDimension]);
+        $stepTimings['Storing vectors'] = $this->getLastBenchmarkDuration();
 
-        // Step 7: Update persisted chunks with qdrant_point_id after vector storage
+        // Step 7: Update persisted chunks with vector store IDs when required (e.g. Qdrant)
         $this->updateProgress($options, ++$currentStep, $totalSteps, 'Updating metadata');
-        $this->updateChunksWithQdrantIds($chunksWithEmbeddings, $options);
+        $this->benchmarkStep('Updating metadata', function() use ($chunksWithEmbeddings, $options) {
+            $this->updateChunksWithVectorStoreIds($chunksWithEmbeddings, $options);
+        }, ['chunk_count' => $chunkCount]);
+        $stepTimings['Updating metadata'] = $this->getLastBenchmarkDuration();
 
         // Step 8: Update usage metrics
         $this->updateProgress($options, ++$currentStep, $totalSteps, 'Recording metrics');
         $companyId = $options['company_id'] ?? null;
         if ($companyId) {
-            $this->usageMetricService->recordDocumentProcessing($companyId, $chunksWithEmbeddings);
+            $this->benchmarkStep('Recording metrics', function() use ($companyId, $chunksWithEmbeddings) {
+                $this->usageMetricService->recordDocumentProcessing($companyId, $chunksWithEmbeddings);
+            }, ['chunk_count' => $chunkCount]);
+            $stepTimings['Recording metrics'] = $this->getLastBenchmarkDuration();
+        } else {
+            $stepTimings['Recording metrics'] = 0;
         }
 
         // Step 9: Call completion callback if provided (for updating version, etc.)
@@ -98,6 +139,16 @@ class DocumentIngestionPipeline
 
         // Final progress update
         $this->updateProgress($options, $totalSteps, $totalSteps, 'Completed');
+
+        // Log summary with total time and breakdown
+        $totalDurationMs = (int) ((microtime(true) - $overallStartTime) * 1000);
+        $this->logService->info("DocumentIngestionPipeline: Processing completed", [
+            'total_duration_ms' => $totalDurationMs,
+            'step_breakdown' => $stepTimings,
+            'document_id' => $document->id,
+            'chunk_count' => $chunkCount,
+            'embedding_model' => $embeddingModel,
+        ]);
 
         return $chunksWithEmbeddings;
     }
@@ -117,6 +168,41 @@ class DocumentIngestionPipeline
             $percentage = (int) (($currentStep / $totalSteps) * 100);
             $options['on_progress']($percentage, $status, $currentStep, $totalSteps);
         }
+    }
+
+    /**
+     * Benchmark a pipeline step execution and log timing information.
+     *
+     * @param string $stepName Name of the step being benchmarked
+     * @param callable $callback The step execution callback
+     * @param array<string, mixed> $metadata Additional metadata to log
+     * @return mixed The result of the callback execution
+     */
+    private function benchmarkStep(string $stepName, callable $callback, array $metadata = []): mixed
+    {
+        $startTime = microtime(true);
+        $result = $callback();
+        $durationMs = (int) ((microtime(true) - $startTime) * 1000);
+        
+        $this->lastBenchmarkDuration = $durationMs;
+        
+        $this->logService->info("DocumentIngestionPipeline: Step '{$stepName}' completed", [
+            'step' => $stepName,
+            'duration_ms' => $durationMs,
+            'metadata' => $metadata,
+        ]);
+        
+        return $result;
+    }
+
+    /**
+     * Get the duration of the last benchmarked step.
+     *
+     * @return int Duration in milliseconds
+     */
+    private function getLastBenchmarkDuration(): int
+    {
+        return $this->lastBenchmarkDuration;
     }
 
     /**
@@ -290,16 +376,11 @@ class DocumentIngestionPipeline
         }
 
         try {
-            // Determine vector dimension from first chunk
             $vectorDimension = $chunks[0]->embedding?->dimension ?? 1536;
-
-            // Ensure collection exists
             $this->vectorStore->ensureCollection($vectorDimension);
-
-            // Upsert chunks
             $this->vectorStore->upsertChunks($chunks);
         } catch (\Exception $e) {
-            throw new QdrantException(
+            throw new VectorStoreException(
                 "Failed to store vectors: {$e->getMessage()}",
                 0,
                 $e
@@ -308,52 +389,48 @@ class DocumentIngestionPipeline
     }
 
     /**
-     * Update persisted chunks with Qdrant point IDs in batch.
+     * Update persisted chunks with vector store IDs when the driver requires it (e.g. Qdrant).
+     * No-op when using drivers that store vectors in the same table (e.g. pgsql).
      *
      * @param array<ChunkDTO> $chunksWithEmbeddings Chunk DTOs with embeddings
      * @param array<string, mixed> $options Processing options
      * @return void
      */
-    private function updateChunksWithQdrantIds(array $chunksWithEmbeddings, array $options): void
+    private function updateChunksWithVectorStoreIds(array $chunksWithEmbeddings, array $options): void
     {
+        if (config('vectorstore.default') !== 'qdrant') {
+            return;
+        }
+
         if (empty($chunksWithEmbeddings)) {
             return;
         }
 
-        // Load persisted chunks by version ID
         $versionId = $options['version_id'] ?? null;
         if (!$versionId) {
             return;
         }
 
         $persistedChunks = $this->chunkRepository->findByVersionId($versionId);
-
-        // Create a map of chunk ID to ChunkDTO for quick lookup
         $chunkDTOsMap = [];
         foreach ($chunksWithEmbeddings as $chunkDTO) {
             $chunkDTOsMap[$chunkDTO->id] = $chunkDTO;
         }
 
-        // Prepare batch updates for Qdrant IDs
-        $qdrantIdUpdates = [];
+        $vectorStoreIdUpdates = [];
         foreach ($persistedChunks as $chunk) {
             $chunkDTO = $chunkDTOsMap[$chunk->id] ?? null;
-
             if (!$chunkDTO || !$chunkDTO->embedding) {
-                continue; // Skip chunks without embeddings
+                continue;
             }
-
-            // Use UUID from metadata as qdrant_point_id
             $uuid = $chunkDTO->metadata['uuid'] ?? $chunk->uuid;
-
             if ($uuid) {
-                $qdrantIdUpdates[$chunk->id] = $uuid;
+                $vectorStoreIdUpdates[$chunk->id] = $uuid;
             }
         }
 
-        // Batch update Qdrant IDs
-        if (!empty($qdrantIdUpdates)) {
-            $this->chunkRepository->batchUpdateQdrantIds($qdrantIdUpdates, 'documents');
+        if (!empty($vectorStoreIdUpdates)) {
+            $this->chunkRepository->batchUpdateQdrantIds($vectorStoreIdUpdates, config('vectorstore.drivers.qdrant.collection_name'));
         }
     }
 }

@@ -64,20 +64,13 @@ class Gemini
     ) {
         // Read from config/env, allow constructor override for testing
         $apiKey = $apiKey ?? config('services.gemini.api_key');
-        $baseUrl = $baseUrl ?? config('services.gemini.base_url', 'https://generativelanguage.googleapis.com/v1beta');
-        $timeout = $timeout ?? config('services.gemini.timeout', 60);
+        $baseUrl = $baseUrl ?? config('services.gemini.base_url');
+        $timeout = $timeout ?? config('services.gemini.timeout');
 
         // Validate required configuration
         if (empty($apiKey)) {
             throw new EmbeddingFailedException(
                 'Gemini API key is required. Please set GEMINI_API_KEY environment variable.'
-            );
-        }
-
-        // Validate timeout is positive
-        if ($timeout <= 0) {
-            throw new EmbeddingFailedException(
-                "Gemini timeout must be a positive integer, got: {$timeout}"
             );
         }
 
@@ -136,5 +129,4 @@ class Gemini
 
         return "{$this->baseUrl}/{$path}";
     }
-
 }
