@@ -102,7 +102,7 @@ class DocumentChunkRepository implements DocumentChunkRepositoryInterface
         foreach ($updates as $id => $metadata) {
             $ids[] = $id;
             $metadataJson = json_encode($metadata);
-            $whenClauses[] = "WHEN {$id} THEN " . DB::getPdo()->quote($metadataJson);
+            $whenClauses[] = "WHEN {$id} THEN " . DB::getPdo()->quote($metadataJson) . "::json";
         }
 
         if (!empty($whenClauses)) {
