@@ -4,7 +4,6 @@ namespace App\Domains\RAG\Splitters;
 
 use App\Domains\RAG\Contracts\TextSplitter;
 use App\Domains\RAG\Tokenizers\TokenizerInterface;
-use App\Domains\RAG\Tokenizers\CachingTokenizer;
 
 /**
  * Recursive text splitter that splits text into chunks using token-based boundaries.
@@ -79,8 +78,8 @@ class RecursiveTextSplitter implements TextSplitter
         $this->minChunkSize = $minChunkSize;
         $this->keepSeparator = $keepSeparator;
 
-        // Wrap tokenizer in cache to avoid duplicate API calls during binary search
-        $this->tokenizer = new CachingTokenizer($tokenizer);
+        // Use tokenizer directly - local tiktoken is fast enough without caching
+        $this->tokenizer = $tokenizer;
 
         $this->overlapHandler = new OverlapHandler($this->tokenizer, $chunkSize, $chunkOverlap, $minChunkSize);
         $this->tokenBasedSplitter = new TokenBasedSplitter($this->tokenizer, $chunkSize);
@@ -313,7 +312,7 @@ class RecursiveTextSplitter implements TextSplitter
      */
     public function setTokenizer(TokenizerInterface $tokenizer): self
     {
-        $this->tokenizer = new CachingTokenizer($tokenizer);
+        $this->tokenizer = $tokenizer;
         $this->overlapHandler->setTokenizer($this->tokenizer);
         $this->tokenBasedSplitter->setTokenizer($this->tokenizer);
         return $this;

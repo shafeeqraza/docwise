@@ -40,6 +40,19 @@ class TiktokenTokenizer implements TokenizerInterface
     }
 
     /**
+     * Count tokens for multiple texts in batch.
+     *
+     * Local tiktoken is fast enough that sequential processing is efficient.
+     *
+     * @param array<string> $texts Array of texts to count tokens for
+     * @return array<int> Array of token counts (same order as input)
+     */
+    public function countTokensBatch(array $texts): array
+    {
+        return array_map(fn(string $text) => $this->countTokens($text), $texts);
+    }
+
+    /**
      * Get text length in tokens (for chunking purposes).
      *
      * @param string $text The text to measure

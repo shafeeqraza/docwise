@@ -238,7 +238,7 @@ class ChatRAGPipeline
     ): array {
         try {
             // Get the actual tokenizer for the model
-            $tokenizer = $this->tokenizerFactory->create($llmModel);
+            $tokenizer = $this->tokenizerFactory->forModel($llmModel);
 
             // Count REAL tokens for each message (with caching)
             $totalInputTokens = 0;
