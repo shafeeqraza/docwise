@@ -136,11 +136,6 @@ class PgVectorStore implements VectorStore
                 ]);
         }
 
-        $this->logService->info('Upserted chunks to PostgreSQL', [
-            'table' => $this->table,
-            'count' => count($toUpdate),
-        ]);
-
         return $chunks;
     }
 
@@ -284,16 +279,6 @@ class PgVectorStore implements VectorStore
                 DB::connection($this->connection)->statement(
                     "ALTER TABLE {$this->table} ADD COLUMN {$this->vectorColumn} vector({$vectorDimension})"
                 );
-                $this->logService->info('Created vector column', [
-                    'table' => $this->table,
-                    'column' => $this->vectorColumn,
-                    'dimension' => $vectorDimension,
-                ]);
-            } else {
-                $this->logService->info('Vector column already exists', [
-                    'table' => $this->table,
-                    'column' => $this->vectorColumn,
-                ]);
             }
         } catch (\Exception $e) {
             if (str_contains($e->getMessage(), self::MSG_ALREADY_EXISTS) || str_contains($e->getMessage(), 'duplicate')) {
@@ -339,11 +324,6 @@ class PgVectorStore implements VectorStore
                         throw $e;
                     }
                 }
-
-                $this->logService->info('Created vector index', [
-                    'table' => $this->table,
-                    'index' => $indexName,
-                ]);
             }
         } catch (\Exception $e) {
             if (str_contains($e->getMessage(), self::MSG_ALREADY_EXISTS) || str_contains($e->getMessage(), 'duplicate')) {
