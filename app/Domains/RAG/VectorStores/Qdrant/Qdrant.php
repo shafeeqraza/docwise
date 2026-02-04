@@ -15,6 +15,14 @@ use Illuminate\Support\Facades\Http;
 class Qdrant
 {
     /**
+     * Build a full request URL (for logging/debugging).
+     */
+    public function buildRequestUrl(string $path): string
+    {
+        return $this->buildUrl($path);
+    }
+
+    /**
      * Make a GET request to Qdrant API.
      *
      * @param string $path The API path (e.g., "/collections/documents")
@@ -46,12 +54,24 @@ class Qdrant
     public function post(string $path, array $data = []): Response
     {
         $url = $this->buildUrl($path);
+        $timeout = (int) config('qdrant.timeout', 30);
         $headers = $this->getHeaders();
 
-        $response = Http::withHeaders($headers)->post($url, $data);
+        // Use Laravel's JSON request mode (sets Content-Type/Accept correctly).
+        // This keeps the client simple; vector formatting is handled upstream.
+        $response = Http::withHeaders($headers)
+            ->timeout($timeout)
+            ->acceptJson()
+            ->asJson()
+            ->post($url, $data);
 
         if (!$response->successful()) {
-            throw new QdrantException('Qdrant POST request failed: ' . $response->body());
+            throw new QdrantException(
+                'Qdrant POST request failed: ' . $response->body() .
+                    ' | Status: ' . $response->status() .
+                    ' | URL: ' . $url .
+                    ' | Request Data: ' . json_encode($data)
+            );
         }
 
         return $response;
@@ -118,22 +138,34 @@ class Qdrant
      */
     private function buildUrl(string $path): string
     {
-        $host = config('qdrant.host', 'localhost');
-        $port = config('qdrant.port', 6333);
+        $host = (string) config('qdrant.host', 'localhost');
+        $port = (int) config('qdrant.port', 6333);
 
-        // Remove any existing protocol from host
-        $host = preg_replace('#^https?://#', '', $host);
+        // Allow full base URL in env, e.g. https://xxx.qdrant.tech:6333
+        if (str_starts_with($host, 'http://') || str_starts_with($host, 'https://')) {
+            // If a scheme is provided but no port, append configured port (needed for local Qdrant: :6333)
+            $parsed = parse_url($host);
+            $scheme = $parsed['scheme'] ?? null;
+            $parsedHost = $parsed['host'] ?? null;
+            $parsedPort = $parsed['port'] ?? null;
 
-        // Determine protocol: use https for cloud instances, http for localhost
-        $protocol = ($host !== 'localhost' && $host !== '127.0.0.1') ? 'https' : 'http';
+            if ($scheme && $parsedHost && !$parsedPort) {
+                $base = "{$scheme}://{$parsedHost}:{$port}";
+                return $base . $path;
+            }
 
-        // For HTTPS (cloud), don't include port (uses default 443)
-        // For HTTP (localhost), include port
-        if ($protocol === 'https') {
-            return "https://{$host}{$path}";
-        } else {
-            return "http://{$host}:{$port}{$path}";
+            return rtrim($host, '/') . $path;
         }
+
+        // Determine protocol: use https for cloud instances, http for localhost.
+        $scheme = ($host === 'localhost' || $host === '127.0.0.1') ? 'http' : 'https';
+
+        // If host already includes a port, don't append config port again.
+        $base = str_contains($host, ':')
+            ? "{$scheme}://{$host}"
+            : "{$scheme}://{$host}:{$port}";
+
+        return $base . $path;
     }
 
     /**
