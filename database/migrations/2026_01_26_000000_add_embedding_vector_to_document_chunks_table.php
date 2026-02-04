@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        $driver = DB::connection()->getDriverName();
-        if ($driver !== 'pgsql') {
+        $dbDriver = DB::connection()->getDriverName();
+        $vectorDb = config('vectorstore.default', 'qdrant');
+
+        if ($vectorDb !== 'pgsql' && $dbDriver !== 'pgsql') {
             return;
         }
 
@@ -26,8 +28,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        $driver = DB::connection()->getDriverName();
-        if ($driver !== 'pgsql') {
+        $dbDriver = DB::connection()->getDriverName();
+        $vectorDb = config('vectorstore.default', 'qdrant');
+
+        if ($vectorDb !== 'pgsql' && $dbDriver !== 'pgsql') {
             return;
         }
 
