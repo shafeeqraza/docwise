@@ -13,9 +13,11 @@ use App\Repositories\V1\Contracts\ApiKeyUsageLogRepositoryInterface;
 use App\Repositories\V1\Contracts\ChatRepositoryInterface;
 use App\Repositories\V1\Contracts\CompanyRepositoryInterface;
 use App\Repositories\V1\Contracts\DocumentChunkRepositoryInterface;
+use App\Repositories\V1\Contracts\FeedbackRepositoryInterface;
 use App\Repositories\V1\Contracts\RetrievedChunkRepositoryInterface;
 use App\Repositories\V1\Contracts\UserRepositoryInterface;
 use App\Repositories\V1\DocumentChunkRepository;
+use App\Repositories\V1\FeedbackRepository;
 use App\Repositories\V1\RetrievedChunkRepository;
 use App\Repositories\V1\UserRepository;
 use Illuminate\Support\ServiceProvider;
@@ -36,5 +38,6 @@ class RepositoryBindingServiceProvider extends ServiceProvider
         $this->app->bind(ChatRepositoryInterface::class, ChatRepository::class);
         $this->app->bind(RetrievedChunkRepositoryInterface::class, RetrievedChunkRepository::class);
         $this->app->bind(ApiKeyUsageLogRepositoryInterface::class, ApiKeyUsageLogRepository::class);
+        $this->app->bind(FeedbackRepositoryInterface::class, FeedbackRepository::class);
     }
 }

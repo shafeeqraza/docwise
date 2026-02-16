@@ -12,6 +12,8 @@ use App\Domains\RAG\Factories\LLMProviderFactory;
 use App\Domains\RAG\Factories\TokenizerFactory;
 use App\Domains\RAG\Pipelines\ChatRAGPipeline;
 use App\Domains\RAG\Pipelines\DocumentIngestionPipeline;
+use App\Domains\RAG\Services\ChunkFilter;
+use App\Domains\RAG\Services\TokenOptimizer;
 use App\Domains\RAG\VectorStores\Qdrant\Qdrant;
 use App\Domains\RAG\VectorStores\VectorStoreManager;
 use Illuminate\Support\ServiceProvider;
@@ -41,6 +43,10 @@ class RAGBindingServiceProvider extends ServiceProvider
         $this->app->singleton(EmbeddingProviderFactory::class);
         $this->app->singleton(TokenizerFactory::class);
         $this->app->singleton(LLMProviderFactory::class);
+
+        // Bind RAG services as singletons
+        $this->app->singleton(TokenOptimizer::class);
+        $this->app->singleton(ChunkFilter::class);
 
         // Bind RAG pipelines as singletons
         $this->app->singleton(ChatRAGPipeline::class);
