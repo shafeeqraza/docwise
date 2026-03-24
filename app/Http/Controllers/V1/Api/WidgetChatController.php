@@ -139,6 +139,7 @@ class WidgetChatController extends Controller
         try {
             // Create DTO from validated request
             $validated = $request->validated();
+
             $dto = new SubmitFeedbackDTO(
                 companyId: $companyId,
                 sessionUuid: $session,
@@ -148,9 +149,9 @@ class WidgetChatController extends Controller
                 comment: $validated['comment'] ?? null
             );
 
-            $result = $this->chatService->submitFeedback($dto);
+            $this->chatService->submitFeedback($dto);
 
-            return $this->respondSuccess($result, $result['message']);
+            return $this->respondMessage('Feedback submitted successfully');
         } catch (\Exception $e) {
             return $this->respondError(
                 $e->getMessage(),

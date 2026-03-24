@@ -89,12 +89,12 @@ class ApiKeyController extends Controller
     {
         try {
             DB::beginTransaction();
-            $company = $request->user()->company;
+            $companyId = $request->attributes->get('current_company_id');
             $user = $request->user();
             $validated = $request->validated();
 
             $dto = new CreateApiKeyDTO(
-                companyId: $company->id,
+                companyId: $companyId,
                 userId: $user->id,
                 name: $validated['name'],
                 allowedDomain: $validated['allowed_domain'],

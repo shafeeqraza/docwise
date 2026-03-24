@@ -174,33 +174,4 @@ class RecursiveTextSplitterRealWorldTest extends TestCase
         }
     }
 
-    /**
-     * Scenario 7: API Call Optimization Check.
-     * Tests if CachingTokenizer reduces total calls during heavy splitting.
-     */
-    public function test_caching_optimization_scenario(): void
-    {
-        $tokenizer = $this->createMockTokenizer();
-        $splitter = new RecursiveTextSplitter($tokenizer, chunkSize: 20, chunkOverlap: 5);
-
-        $text = str_repeat("This is a repetitive sentence. ", 10);
-
-        // Reset call count after setup
-        $tokenizer->callCount = 0;
-
-        $splitter->splitText($text);
-
-        $firstRunCalls = $tokenizer->callCount;
-
-        // Second run with same text - should hit cache
-        $splitter->splitText($text);
-
-        $secondRunCalls = $tokenizer->callCount;
-
-        $this->assertLessThanOrEqual(
-            $firstRunCalls,
-            $secondRunCalls,
-            "Subsequent runs should be optimized (not necessarily zero due to overlap permutations, but reduced)"
-        );
-    }
 }

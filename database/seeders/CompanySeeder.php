@@ -28,7 +28,8 @@ class CompanySeeder extends Seeder
                 'settings' => [
                     'max_documents' => 500,
                     'embedding_model' => 'models/gemini-embedding-001',
-                    'chunk_size' => 500,
+                    'chunk_size' => 512,
+                    'chunk_overlap' => 120,
                     'theme' => 'light',
                 ],
             ],
@@ -46,7 +47,8 @@ class CompanySeeder extends Seeder
                 'settings' => [
                     'max_documents' => 50,
                     'embedding_model' => 'models/gemini-embedding-001',
-                    'chunk_size' => 500,
+                    'chunk_size' => 512,
+                    'chunk_overlap' => 120,
                 ],
             ],
             [
@@ -63,7 +65,8 @@ class CompanySeeder extends Seeder
                 'settings' => [
                     'max_documents' => -1, // Unlimited
                     'embedding_model' => 'models/gemini-embedding-001',
-                    'chunk_size' => 1000,
+                    'chunk_size' => 512,
+                    'chunk_overlap' => 120,
                     'custom_features' => [
                         'sso_enabled' => true,
                         'custom_domain' => true,
@@ -84,7 +87,8 @@ class CompanySeeder extends Seeder
                 'settings' => [
                     'max_documents' => 10,
                     'embedding_model' => 'models/gemini-embedding-001',
-                    'chunk_size' => 500,
+                    'chunk_size' => 512,
+                    'chunk_overlap' => 120,
                 ],
             ],
             [
@@ -99,7 +103,8 @@ class CompanySeeder extends Seeder
                 'settings' => [
                     'max_documents' => 500,
                     'embedding_model' => 'models/gemini-embedding-001',
-                    'chunk_size' => 500,
+                    'chunk_size' => 512,
+                    'chunk_overlap' => 120,
                 ],
             ],
         ];

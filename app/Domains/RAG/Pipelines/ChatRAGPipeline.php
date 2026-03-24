@@ -3,14 +3,14 @@
 namespace App\Domains\RAG\Pipelines;
 
 use App\Domains\RAG\DTOs\ChunkDTO;
+use App\Domains\RAG\DTOs\ChatRagResult;
 use App\Domains\RAG\DTOs\CompletionDTO;
 use App\Domains\RAG\Factories\EmbeddingProviderFactory;
 use App\Domains\RAG\Factories\LLMProviderFactory;
-use App\Domains\RAG\Factories\TokenizerFactory;
+use App\Domains\RAG\Services\ChunkFilter;
+use App\Domains\RAG\Services\TokenOptimizer;
 use App\Domains\RAG\Services\VectorStoreService;
 use App\Services\V1\Common\LogService;
-use App\Services\V1\Common\TokenCountCache;
-use App\Services\V1\Common\TokenEstimator;
 
 /**
  * Chat RAG (Retrieval Augmented Generation) Pipeline.
@@ -31,9 +31,8 @@ class ChatRAGPipeline
         private readonly VectorStoreService $vectorStoreService,
         private readonly EmbeddingProviderFactory $embeddingProviderFactory,
         private readonly LLMProviderFactory $llmProviderFactory,
-        private readonly TokenizerFactory $tokenizerFactory,
-        private readonly TokenEstimator $tokenEstimator,
-        private readonly TokenCountCache $tokenCountCache,
+        private readonly TokenOptimizer $tokenOptimizer,
+        private readonly ChunkFilter $chunkFilter,
         private readonly ?LogService $logService = null
     ) {}
 
@@ -51,18 +50,9 @@ class ChatRAGPipeline
      *     max_output_tokens: int,
      *     max_total_tokens: int
      * } $params Pipeline parameters
-     * @return array{
-     *     content: string,
-     *     model: string,
-     *     tokens_prompt: int,
-     *     tokens_completion: int,
-     *     finish_reason: string,
-     *     retrieved_chunks: array<ChunkDTO>,
-     *     citations: array,
-     *     confidence_score: float
-     * } Pipeline result
+     * @return ChatRagResult Pipeline result
      */
-    public function execute(array $params): array
+    public function execute(array $params): ChatRagResult
     {
         $startTime = microtime(true);
 
@@ -98,6 +88,27 @@ class ChatRAGPipeline
             ['company_id' => $companyId]
         );
 
+        // Step 2.5: Check if we have relevant chunks (similarity threshold)
+        $relevantChunks = $this->chunkFilter->filterRelevant($chunks);
+
+        if (empty($relevantChunks)) {
+            $this->logService?->info('No relevant chunks found, returning no-info response', [
+                'company_id' => $companyId,
+                'total_chunks_retrieved' => count($chunks),
+            ]);
+
+            return new ChatRagResult(
+                content: "I don't have any information about this topic in the provided documents. Please ask a question related to the content that has been uploaded to this knowledge base.",
+                model: $llmModel,
+                tokensPrompt: 0,
+                tokensCompletion: 0,
+                finishReason: 'no_relevant_context',
+                retrievedChunks: [],
+                citations: [],
+                confidenceScore: 0.0,
+            );
+        }
+
         // Step 3: Build context from retrieved chunks
         $context = $this->buildContext($chunks);
 
@@ -105,7 +116,7 @@ class ChatRAGPipeline
         $messages = $this->buildMessages($context, $chatHistory, $message);
 
         // Step 5: Validate and optimize tokens (CRITICAL - accurate counting)
-        $messages = $this->validateAndOptimizeTokens(
+        $messages = $this->tokenOptimizer->validateAndOptimize(
             $messages,
             $llmModel,
             $maxOutputTokens,
@@ -131,26 +142,26 @@ class ChatRAGPipeline
         $latencyMs = (int) ((microtime(true) - $startTime) * 1000);
 
         // Step 8: Build citations and calculate confidence
-        $citations = $this->buildCitations($chunks);
-        $confidenceScore = $this->calculateConfidenceScore($chunks);
+        $citations = $this->buildCitations($relevantChunks);
+        $confidenceScore = $this->calculateConfidenceScore($relevantChunks);
 
         $this->logService?->info('RAG pipeline completed', [
             'company_id' => $companyId,
             'latency_ms' => $latencyMs,
-            'chunks_retrieved' => count($chunks),
+            'chunks_retrieved' => count($relevantChunks),
             'confidence_score' => $confidenceScore,
         ]);
 
-        return [
-            'content' => $completion->content,
-            'model' => $completion->model,
-            'tokens_prompt' => $completion->tokensPrompt,
-            'tokens_completion' => $completion->tokensCompletion,
-            'finish_reason' => $completion->finishReason,
-            'retrieved_chunks' => $chunks,
-            'citations' => $citations,
-            'confidence_score' => $confidenceScore,
-        ];
+        return new ChatRagResult(
+            content: $completion->content,
+            model: $completion->model,
+            tokensPrompt: $completion->tokensPrompt,
+            tokensCompletion: $completion->tokensCompletion,
+            finishReason: $completion->finishReason,
+            retrievedChunks: $relevantChunks,
+            citations: $citations,
+            confidenceScore: $confidenceScore,
+        );
     }
 
     /**
@@ -179,16 +190,27 @@ class ChatRAGPipeline
      * @param string $context Retrieved context
      * @param array $chatHistory Previous messages
      * @param string $userMessage Current user message
+     * @param bool $hasRelevantContext Whether relevant context was found
      * @return array<array<string, string>>
      */
-    private function buildMessages(string $context, array $chatHistory, string $userMessage): array
+    private function buildMessages(string $context, array $chatHistory, string $userMessage, bool $hasRelevantContext = true): array
     {
         $messages = [];
 
         // System message with context
-        $systemPrompt = "You are a helpful AI assistant. Use the following context to answer the user's question accurately.";
-        if (!empty($context)) {
-            $systemPrompt .= "\n\nRelevant Context:\n{$context}";
+        $systemPrompt = "You are a helpful AI assistant that answers questions based ONLY on the provided context from uploaded documents.\n\n";
+
+        if ($hasRelevantContext && !empty($context)) {
+            $systemPrompt .= "IMPORTANT: You MUST only answer questions using the information provided in the context below. ";
+            $systemPrompt .= "If the user's question cannot be answered using the provided context, you MUST respond with: ";
+            $systemPrompt .= "\"I don't have any information about this topic in the provided documents. Please ask a question related to the content that has been uploaded to this knowledge base.\"\n\n";
+            $systemPrompt .= "Do NOT use your general knowledge or make up answers. Only use information from the context.\n\n";
+            $systemPrompt .= "Relevant Context:\n\n{$context}";
+        } else {
+            $systemPrompt .= "IMPORTANT: No relevant context was found for this query. ";
+            $systemPrompt .= "You MUST respond with: ";
+            $systemPrompt .= "\"I don't have any information about this topic in the provided documents. Please ask a question related to the content that has been uploaded to this knowledge base.\"";
+            $systemPrompt .= "\n\nDo NOT attempt to answer the question using your general knowledge.";
         }
 
         $messages[] = [
@@ -213,218 +235,6 @@ class ChatRAGPipeline
         return $messages;
     }
 
-    /**
-     * Validate and optimize token usage before LLM call.
-     *
-     * This is the CRITICAL validation point - we use real token counting here because:
-     * 1. We've already invested time in embedding + vector search
-     * 2. We're about to make an expensive LLM API call
-     * 3. We need 100% accuracy for model context limits
-     * 4. We can intelligently truncate context/history if needed
-     *
-     * @param array<array<string, string>> $messages The constructed messages
-     * @param string $llmModel The LLM model being used
-     * @param int $maxOutputTokens Max tokens for output (passed by reference)
-     * @param int $maxTotalTokens Max total tokens allowed
-     * @param int $companyId Company ID for logging
-     * @return array<array<string, string>> Optimized messages array
-     */
-    private function validateAndOptimizeTokens(
-        array $messages,
-        string $llmModel,
-        int &$maxOutputTokens,
-        int $maxTotalTokens,
-        int $companyId
-    ): array {
-        try {
-            // Get the actual tokenizer for the model
-            $tokenizer = $this->tokenizerFactory->create($llmModel);
-
-            // Count REAL tokens for each message (with caching)
-            $totalInputTokens = 0;
-            foreach ($messages as $message) {
-                if (isset($message['content'])) {
-                    $tokens = $this->tokenCountCache->remember(
-                        $message['content'],
-                        fn() => $tokenizer->countTokens($message['content'])
-                    );
-                    $totalInputTokens += $tokens;
-                }
-                // Add overhead for message structure
-                $totalInputTokens += 4;
-            }
-
-            $totalEstimatedTokens = $totalInputTokens + $maxOutputTokens;
-
-            // Check if we exceed limits
-            if ($totalEstimatedTokens > $maxTotalTokens) {
-                $this->logService?->warning('Token limit exceeded, optimizing context', [
-                    'total_input_tokens' => $totalInputTokens,
-                    'requested_output_tokens' => $maxOutputTokens,
-                    'total_estimated' => $totalEstimatedTokens,
-                    'max_total' => $maxTotalTokens,
-                    'company_id' => $companyId,
-                    'model' => $llmModel,
-                ]);
-
-                // Strategy: Reduce output tokens first, then truncate context if needed
-                $availableForOutput = $maxTotalTokens - $totalInputTokens;
-
-                if ($availableForOutput < 500) {
-                    // Not enough space - need to truncate context
-                    $messages = $this->truncateContext($messages, $tokenizer, $maxTotalTokens, $maxOutputTokens);
-                } else {
-                    // Just reduce output tokens
-                    $maxOutputTokens = max(500, min($maxOutputTokens, $availableForOutput));
-
-                    $this->logService?->info('Reduced output tokens to fit budget', [
-                        'new_max_output_tokens' => $maxOutputTokens,
-                        'company_id' => $companyId,
-                    ]);
-                }
-            } else {
-                $this->logService?->info('Token validation passed', [
-                    'total_input_tokens' => $totalInputTokens,
-                    'max_output_tokens' => $maxOutputTokens,
-                    'total_budget' => $maxTotalTokens,
-                    'headroom' => $maxTotalTokens - $totalEstimatedTokens,
-                    'company_id' => $companyId,
-                ]);
-            }
-
-            return $messages;
-        } catch (\Exception $e) {
-            // If real token counting fails, fall back to estimation
-            $this->logService?->warning('Token validation failed, using estimation fallback', [
-                'error' => $e->getMessage(),
-                'company_id' => $companyId,
-            ]);
-
-            // Use fast estimation as fallback
-            $messageContents = array_filter(array_column($messages, 'content'));
-            $estimatedTokens = $this->tokenEstimator->estimateMultiple($messageContents);
-            $estimatedTokens += count($messages) * 4;
-
-            if ($estimatedTokens + $maxOutputTokens > $maxTotalTokens) {
-                $maxOutputTokens = max(500, $maxTotalTokens - $estimatedTokens);
-            }
-
-            return $messages;
-        }
-    }
-
-    /**
-     * Truncate context intelligently to fit within token budget.
-     *
-     * Strategy:
-     * 1. Keep system message (required)
-     * 2. Keep user's current message (required)
-     * 3. Reduce chat history (oldest first)
-     * 4. Reduce retrieved context (lowest similarity first)
-     *
-     * @param array<array<string, string>> $messages The messages array
-     * @param mixed $tokenizer The tokenizer instance
-     * @param int $maxTotalTokens Maximum total tokens
-     * @param int $targetOutputTokens Target output tokens
-     * @return array<array<string, string>> Truncated messages
-     */
-    private function truncateContext(
-        array $messages,
-        $tokenizer,
-        int $maxTotalTokens,
-        int $targetOutputTokens
-    ): array {
-        $targetInputTokens = $maxTotalTokens - $targetOutputTokens;
-
-        // Identify message types
-        $systemMessage = null;
-        $userMessage = null;
-        $contextMessages = [];
-        $historyMessages = [];
-
-        foreach ($messages as $index => $message) {
-            $role = $message['role'] ?? '';
-
-            if ($role === 'system') {
-                $systemMessage = ['index' => $index, 'message' => $message];
-            } elseif ($role === 'user' && $index === count($messages) - 1) {
-                // Last message is current user query
-                $userMessage = ['index' => $index, 'message' => $message];
-            } elseif (isset($message['name']) && $message['name'] === 'context') {
-                $contextMessages[] = ['index' => $index, 'message' => $message];
-            } else {
-                $historyMessages[] = ['index' => $index, 'message' => $message];
-            }
-        }
-
-        // Build optimized messages array
-        $optimizedMessages = [];
-        $currentTokens = 0;
-
-        // 1. Always include system message
-        if ($systemMessage) {
-            $optimizedMessages[] = $systemMessage['message'];
-            $currentTokens += $this->tokenCountCache->remember(
-                $systemMessage['message']['content'],
-                fn() => $tokenizer->countTokens($systemMessage['message']['content'])
-            ) + 4;
-        }
-
-        // 2. Calculate user message tokens
-        if ($userMessage) {
-            $userTokens = $this->tokenCountCache->remember(
-                $userMessage['message']['content'],
-                fn() => $tokenizer->countTokens($userMessage['message']['content'])
-            ) + 4;
-            $currentTokens += $userTokens;
-        }
-
-        // 3. Add context chunks (reduce if needed)
-        $availableTokens = $targetInputTokens - $currentTokens;
-        foreach ($contextMessages as $contextMsg) {
-            $msgTokens = $this->tokenCountCache->remember(
-                $contextMsg['message']['content'],
-                fn() => $tokenizer->countTokens($contextMsg['message']['content'])
-            ) + 4;
-
-            if ($currentTokens + $msgTokens <= $availableTokens) {
-                $optimizedMessages[] = $contextMsg['message'];
-                $currentTokens += $msgTokens;
-            } else {
-                break; // Stop adding context
-            }
-        }
-
-        // 4. Add history (newest first, oldest dropped)
-        $availableTokens = $targetInputTokens - $currentTokens;
-        foreach (array_reverse($historyMessages) as $historyMsg) {
-            $msgTokens = $this->tokenCountCache->remember(
-                $historyMsg['message']['content'],
-                fn() => $tokenizer->countTokens($historyMsg['message']['content'])
-            ) + 4;
-
-            if ($currentTokens + $msgTokens <= $availableTokens) {
-                array_splice($optimizedMessages, count($optimizedMessages) - 1, 0, [$historyMsg['message']]);
-                $currentTokens += $msgTokens;
-            } else {
-                break; // Stop adding history
-            }
-        }
-
-        // 5. Add user message at the end
-        if ($userMessage) {
-            $optimizedMessages[] = $userMessage['message'];
-        }
-
-        $this->logService?->info('Context truncated to fit token budget', [
-            'original_messages' => count($messages),
-            'optimized_messages' => count($optimizedMessages),
-            'final_input_tokens' => $currentTokens,
-            'target_input_tokens' => $targetInputTokens,
-        ]);
-
-        return $optimizedMessages;
-    }
 
     /**
      * Build citations from chunks.
@@ -446,6 +256,7 @@ class ChatRAGPipeline
         }
         return $citations;
     }
+
 
     /**
      * Calculate confidence score from chunks.

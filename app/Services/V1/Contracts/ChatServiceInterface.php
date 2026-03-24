@@ -2,7 +2,6 @@
 
 namespace App\Services\V1\Contracts;
 
-use App\Http\Resources\ChatMessageResource;
 use App\Http\Resources\ChatSessionResource;
 use App\Services\V1\DTOs\GetChatMessagesDTO;
 use App\Services\V1\DTOs\SendChatMessageDTO;
@@ -30,7 +29,7 @@ interface ChatServiceInterface
      * Submit feedback for a message.
      *
      * @param SubmitFeedbackDTO $dto
-     * @return array<string, mixed>
+     * @return bool
      */
-    public function submitFeedback(SubmitFeedbackDTO $dto): array;
+    public function submitFeedback(SubmitFeedbackDTO $dto): bool;
 }

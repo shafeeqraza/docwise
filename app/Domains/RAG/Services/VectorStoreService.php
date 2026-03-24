@@ -6,15 +6,17 @@ use App\Domains\RAG\Contracts\VectorStore;
 use App\Domains\RAG\DTOs\ChunkDTO;
 use App\Domains\RAG\DTOs\EmbeddingDTO;
 use App\Domains\RAG\Exceptions\QdrantException as RAGQdrantException;
-use App\Exceptions\QdrantException;
+use App\Domains\RAG\Exceptions\VectorStoreException as RAGVectorStoreException;
+use App\Exceptions\VectorStoreException;
 use App\Models\DocumentChunk;
 use App\Services\V1\Common\LogService;
+use Illuminate\Support\Facades\Config;
 
 /**
  * Service for storing and retrieving vectors.
  *
  * Follows Adapter Pattern: Adapts domain vector store to application layer needs.
- * Follows Single Responsibility Principle (SRP): Only vector storage logic.
+ * Driver-agnostic: works with any configured vector store (Qdrant, PostgreSQL, etc.).
  */
 class VectorStoreService
 {
@@ -24,19 +26,19 @@ class VectorStoreService
     ) {}
 
     /**
-     * Ensure Qdrant collection exists for a company.
+     * Ensure the vector store collection/schema exists.
      *
      * @return bool True if collection exists or was created
-     * @throws QdrantException If collection cannot be created
+     * @throws VectorStoreException If collection cannot be created
      */
     public function ensureCollection(): bool
     {
         try {
             return $this->vectorStore->ensureCollection();
-        } catch (RAGQdrantException $e) {
-            throw new QdrantException($e->getMessage(), $e->getCode(), $e);
+        } catch (RAGVectorStoreException|RAGQdrantException $e) {
+            throw new VectorStoreException($e->getMessage(), $e->getCode(), $e);
         } catch (\Exception $e) {
-            throw new QdrantException(
+            throw new VectorStoreException(
                 "Failed to ensure collection: {$e->getMessage()}",
                 0,
                 $e
@@ -45,11 +47,11 @@ class VectorStoreService
     }
 
     /**
-     * Upsert chunks to Qdrant vector store.
+     * Upsert chunks to the configured vector store.
      *
      * @param array<DocumentChunk> $chunks Array of DocumentChunk models with embeddings
-     * @return array<DocumentChunk> Array of chunks with qdrant_point_id set
-     * @throws QdrantException If upsert operation fails
+     * @return array<DocumentChunk> Array of chunks (with vector store IDs set when driver is Qdrant)
+     * @throws VectorStoreException If upsert operation fails
      */
     public function upsertChunks(array $chunks): array
     {
@@ -58,36 +60,26 @@ class VectorStoreService
         }
 
         try {
-            // Convert Eloquent models to DTOs
             $chunkDTOs = $this->convertToDTOs($chunks);
+            $this->vectorStore->upsertChunks($chunkDTOs);
 
-            // Upsert using domain vector store
-            $updatedDTOs = $this->vectorStore->upsertChunks($chunkDTOs);
-
-            // Update Eloquent models with vector store IDs if needed
-            // Note: The domain layer doesn't modify Eloquent models, so we handle persistence here
-            foreach ($chunks as $index => $chunk) {
-                if (isset($chunk->metadata['embedding_vector']) && $chunk->metadata['embedding_vector']) {
-                    // Extract point ID from DTO metadata if available, or use chunk UUID
-                    $pointId = $chunk->uuid ?? $chunk->id;
-                    $chunk->qdrant_point_id = $pointId;
-                    $chunk->qdrant_collection = 'documents'; // Default collection name
-                    $chunk->save();
+            // Only persist vector store IDs when using Qdrant (pgsql stores vectors in same table)
+            if (Config::get('vectorstore.default') === 'qdrant') {
+                foreach ($chunks as $chunk) {
+                    if (isset($chunk->metadata['embedding_vector']) && $chunk->metadata['embedding_vector']) {
+                        $chunk->qdrant_point_id = $chunk->uuid ?? (string) $chunk->id;
+                        $chunk->qdrant_collection = Config::get('vectorstore.drivers.qdrant.collection_name', 'documents');
+                        $chunk->save();
+                    }
                 }
             }
 
             return $chunks;
-        } catch (RAGQdrantException $e) {
-            throw new QdrantException($e->getMessage(), $e->getCode(), $e);
+        } catch (RAGVectorStoreException|RAGQdrantException $e) {
+            throw new VectorStoreException($e->getMessage(), $e->getCode(), $e);
         } catch (\Exception $e) {
-            $this->logService->error('Vector store upsert failed', [
-                'error' => $e->getMessage(),
-            ]);
-            throw new QdrantException(
-                "Failed to upsert chunks: {$e->getMessage()}",
-                0,
-                $e
-            );
+            $this->logService->error('Vector store upsert failed', ['error' => $e->getMessage()]);
+            throw new VectorStoreException("Failed to upsert chunks: {$e->getMessage()}", 0, $e);
         }
     }
 
@@ -98,28 +90,22 @@ class VectorStoreService
      * @param int $limit Maximum number of results to return
      * @param array<string, mixed> $filters Optional filters (e.g., company_id, document_id)
      * @return array<ChunkDTO> Array of matching chunks
-     * @throws QdrantException If search operation fails
+     * @throws VectorStoreException If search operation fails
      */
     public function search(array $queryVector, int $limit = 10, array $filters = []): array
     {
         try {
             return $this->vectorStore->search($queryVector, $limit, $filters);
-        } catch (RAGQdrantException $e) {
-            throw new QdrantException($e->getMessage(), $e->getCode(), $e);
+        } catch (RAGVectorStoreException|RAGQdrantException $e) {
+            throw new VectorStoreException($e->getMessage(), $e->getCode(), $e);
         } catch (\Exception $e) {
-            $this->logService->error('Vector store search failed', [
-                'error' => $e->getMessage(),
-            ]);
-            throw new QdrantException(
-                "Failed to search vectors: {$e->getMessage()}",
-                0,
-                $e
-            );
+            $this->logService->error('Vector store search failed', ['error' => $e->getMessage()]);
+            throw new VectorStoreException("Failed to search vectors: {$e->getMessage()}", 0, $e);
         }
     }
 
     /**
-     * Delete chunks from Qdrant by document ID.
+     * Delete vectors for a document by document ID.
      *
      * @param int $documentId The document ID
      * @return bool True if successful
@@ -166,13 +152,13 @@ class VectorStoreService
             $dtos[] = new ChunkDTO(
                 content: $chunk->content,
                 index: $chunk->chunk_index,
-                metadata: $chunk->metadata ?? [],
-                tokens: $chunk->token_count,
-                embedding: $embeddingDTO,
+                tokens: (int) ($chunk->token_count ?? 0),
                 id: $chunk->id,
                 documentId: $chunk->document_id,
                 versionId: $chunk->version_id,
-                companyId: $chunk->company_id
+                companyId: $chunk->company_id,
+                metadata: $chunk->metadata ?? [],
+                embedding: $embeddingDTO
             );
         }
         return $dtos;

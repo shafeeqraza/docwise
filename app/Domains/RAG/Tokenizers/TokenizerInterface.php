@@ -18,6 +18,17 @@ interface TokenizerInterface
     public function countTokens(string $text): int;
 
     /**
+     * Count tokens for multiple texts in batch.
+     *
+     * Default implementation calls countTokens() sequentially.
+     * Implementations may override for parallel/optimized processing.
+     *
+     * @param array<string> $texts Array of texts to count tokens for
+     * @return array<int> Array of token counts (same order as input)
+     */
+    public function countTokensBatch(array $texts): array;
+
+    /**
      * Get text length in tokens (for chunking purposes).
      *
      * @param string $text The text to measure

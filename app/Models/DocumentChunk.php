@@ -22,6 +22,7 @@ class DocumentChunk extends Model
         'content_hash',
         'token_count',
         'embedding_model',
+        'embedding',
         'qdrant_point_id',
         'qdrant_collection',
         'metadata',

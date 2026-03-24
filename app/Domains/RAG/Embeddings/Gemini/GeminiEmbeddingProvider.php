@@ -2,6 +2,7 @@
 
 namespace App\Domains\RAG\Embeddings\Gemini;
 
+use App\Domains\RAG\Clients\GeminiApiClient;
 use App\Domains\RAG\Contracts\EmbeddingProvider;
 use App\Domains\RAG\DTOs\EmbeddingDTO;
 use App\Domains\RAG\Embeddings\Concerns\RetriesEmbeddingRequests;
@@ -14,6 +15,7 @@ use App\Services\V1\Common\LogService;
  * Follows Single Responsibility Principle (SRP): Only Gemini-specific embedding logic.
  * Follows Liskov Substitution Principle (LSP): Fully implements EmbeddingProvider interface.
  * Follows Open/Closed Principle (OCP): Can be extended without modification.
+ * Follows Dependency Inversion Principle (DIP): Depends on GeminiApiClient abstraction.
  */
 class GeminiEmbeddingProvider implements EmbeddingProvider
 {
@@ -30,43 +32,34 @@ class GeminiEmbeddingProvider implements EmbeddingProvider
     /**
      * Create a new Gemini embedding provider instance.
      *
-     * @param Gemini $gemini The Gemini HTTP client
+     * @param GeminiApiClient $client The Gemini API client
      * @param LogService|null $logService The log service
      */
     public function __construct(
-        private readonly Gemini $gemini,
+        private readonly GeminiApiClient $client,
         ?LogService $logService = null
     ) {
         $this->batchSize = config('services.gemini.batch_size', self::DEFAULT_BATCH_SIZE);
         $this->maxRetries = config('services.gemini.max_retries', self::DEFAULT_RETRIES);
-        
+
         // Set log service for trait
         $this->logService = $logService ?? app(LogService::class);
     }
 
     /**
      * Normalize model name to ensure it has the "models/" prefix.
-     *
-     * @param string $model The model name
-     * @return string Normalized model name
      */
     protected function normalizeModelName(string $model): string
     {
-        if (!str_starts_with($model, 'models/')) {
-            return "models/{$model}";
-        }
-        return $model;
+        return $this->client->normalizeModelName($model);
     }
 
     /**
      * Get model name without "models/" prefix for endpoint URLs.
-     *
-     * @param string $model The model name
-     * @return string Model name without prefix
      */
     protected function getModelNameForEndpoint(string $model): string
     {
-        return str_replace('models/', '', $model);
+        return $this->client->extractModelName($model);
     }
 
 
@@ -191,7 +184,7 @@ class GeminiEmbeddingProvider implements EmbeddingProvider
      */
     protected function makeEmbedContentRequest(string $text, string $model): \Illuminate\Http\Client\Response
     {
-        return $this->gemini->post("{$model}:embedContent", [
+        return $this->client->post("{$model}:embedContent", [
             'model' => $model,
             'content' => [
                 'parts' => [
@@ -216,7 +209,7 @@ class GeminiEmbeddingProvider implements EmbeddingProvider
     {
         $modelName = $this->getModelNameForEndpoint($model);
 
-        return $this->gemini->post("models/{$modelName}:batchEmbedContents", [
+        return $this->client->post("models/{$modelName}:batchEmbedContents", [
             'requests' => $requests
         ]);
     }

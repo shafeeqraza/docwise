@@ -3,6 +3,7 @@
 namespace App\Domains\RAG\VectorStores\Concerns;
 
 use App\Domains\RAG\Exceptions\QdrantException;
+use App\Domains\RAG\Exceptions\VectorStoreException;
 use App\Services\V1\Common\LogService;
 use Illuminate\Http\Client\RequestException;
 
@@ -23,7 +24,7 @@ trait RetriesVectorStoreOperations
      * @param int $maxRetries Maximum number of retry attempts
      * @param array $context Additional context for logging
      * @return mixed The result of the operation
-     * @throws QdrantException
+     * @throws VectorStoreException|QdrantException
      */
     protected function retryWithBackoff(
         callable $operation,
@@ -36,7 +37,7 @@ trait RetriesVectorStoreOperations
         while ($attempt < $maxRetries) {
             try {
                 return $operation();
-            } catch (RequestException | QdrantException $e) {
+            } catch (RequestException | QdrantException | VectorStoreException $e) {
                 $attempt++;
 
                 if ($attempt >= $maxRetries) {
@@ -45,9 +46,9 @@ trait RetriesVectorStoreOperations
                         $e,
                         array_merge($context, ['attempt' => $attempt])
                     );
-                    throw $e instanceof QdrantException
+                    throw ($e instanceof VectorStoreException || $e instanceof QdrantException)
                         ? $e
-                        : new QdrantException("{$operationName} failed: {$e->getMessage()}", 0, $e);
+                        : new VectorStoreException("{$operationName} failed: {$e->getMessage()}", 0, $e);
                 }
 
                 $wait = pow(2, $attempt - 1); // Exponential backoff: 1s, 2s, 4s...
