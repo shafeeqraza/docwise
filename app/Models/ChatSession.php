@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\ChatMessageRole;
+use App\Enums\ChatSessionChannel;
+use App\Enums\ChatSessionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,13 +37,15 @@ class ChatSession extends Model
             'user_metadata' => 'array',
             'context' => 'array',
             'ended_at' => 'datetime',
+            'channel' => ChatSessionChannel::class,
+            'status' => ChatSessionStatus::class,
         ];
     }
 
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($model) {
             if (empty($model->uuid)) {
                 $model->uuid = Str::uuid();
@@ -67,17 +72,17 @@ class ChatSession extends Model
     // Helper methods
     public function isActive(): bool
     {
-        return $this->status === 'active';
+        return $this->status === ChatSessionStatus::ACTIVE;
     }
 
     public function isResolved(): bool
     {
-        return $this->status === 'resolved';
+        return $this->status === ChatSessionStatus::RESOLVED;
     }
 
     public function isEscalated(): bool
     {
-        return $this->status === 'escalated';
+        return $this->status === ChatSessionStatus::ESCALATED;
     }
 
     public function getLastMessage(): ?ChatMessage
@@ -87,12 +92,12 @@ class ChatSession extends Model
 
     public function getLastUserMessage(): ?ChatMessage
     {
-        return $this->messages()->where('role', 'user')->latest()->first();
+        return $this->messages()->where('role', ChatMessageRole::USER)->latest()->first();
     }
 
     public function getLastAssistantMessage(): ?ChatMessage
     {
-        return $this->messages()->where('role', 'assistant')->latest()->first();
+        return $this->messages()->where('role', ChatMessageRole::ASSISTANT)->latest()->first();
     }
 
     public function getDuration(): ?int
@@ -100,7 +105,7 @@ class ChatSession extends Model
         if (!$this->ended_at) {
             return $this->created_at->diffInSeconds(now());
         }
-        
+
         return $this->created_at->diffInSeconds($this->ended_at);
     }
 
@@ -108,16 +113,16 @@ class ChatSession extends Model
     {
         $messages = $this->messages()->orderBy('created_at')->get();
         $responseTimes = [];
-        
+
         for ($i = 0; $i < count($messages) - 1; $i++) {
             $current = $messages[$i];
             $next = $messages[$i + 1];
-            
-            if ($current->role === 'user' && $next->role === 'assistant') {
+
+            if ($current->role === ChatMessageRole::USER && $next->role === ChatMessageRole::ASSISTANT) {
                 $responseTimes[] = $current->created_at->diffInSeconds($next->created_at);
             }
         }
-        
+
         return count($responseTimes) > 0 ? array_sum($responseTimes) / count($responseTimes) : null;
     }
 

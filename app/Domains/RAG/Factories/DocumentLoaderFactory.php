@@ -3,6 +3,7 @@
 namespace App\Domains\RAG\Factories;
 
 use App\Domains\RAG\Contracts\DocumentLoader;
+use App\Enums\DocumentFileType;
 use App\Domains\RAG\Exceptions\UnsupportedDocumentTypeException;
 use App\Domains\RAG\Loaders\Docx\DocxDocumentLoader;
 use App\Domains\RAG\Loaders\Pdf\PdfDocumentLoader;
@@ -19,16 +20,16 @@ use Illuminate\Contracts\Container\Container;
 class DocumentLoaderFactory
 {
     /**
-     * Mapping of file types to loader classes.
+     * Mapping of file types to loader classes, keyed by DocumentFileType value.
      *
      * @var array<string, class-string<DocumentLoader>>
      */
     private array $loaderMap = [
-        'pdf' => PdfDocumentLoader::class,
-        'docx' => DocxDocumentLoader::class,
-        'txt' => TxtDocumentLoader::class,
-        'html' => TxtDocumentLoader::class,
-        'md' => TxtDocumentLoader::class,
+        DocumentFileType::PDF->value => PdfDocumentLoader::class,
+        DocumentFileType::DOCX->value => DocxDocumentLoader::class,
+        DocumentFileType::TXT->value => TxtDocumentLoader::class,
+        DocumentFileType::HTML->value => TxtDocumentLoader::class,
+        DocumentFileType::MD->value => TxtDocumentLoader::class,
     ];
 
     public function __construct(
@@ -38,21 +39,19 @@ class DocumentLoaderFactory
     /**
      * Create a document loader for the given file type.
      *
-     * @param string $fileType The file type (pdf, docx, txt, etc.)
+     * @param DocumentFileType $fileType The file type
      * @return DocumentLoader The appropriate loader instance
-     * @throws UnsupportedDocumentTypeException If file type is not supported
+     * @throws UnsupportedDocumentTypeException If no loader is registered for the type
      */
-    public function create(string $fileType): DocumentLoader
+    public function create(DocumentFileType $fileType): DocumentLoader
     {
-        $normalizedType = strtolower($fileType);
-
-        if (!isset($this->loaderMap[$normalizedType])) {
+        if (!isset($this->loaderMap[$fileType->value])) {
             throw new UnsupportedDocumentTypeException(
-                "Unsupported document type: {$fileType}. Supported types: " . implode(', ', array_keys($this->loaderMap))
+                "Unsupported document type: {$fileType->value}. Supported types: " . implode(', ', array_keys($this->loaderMap))
             );
         }
 
-        $loaderClass = $this->loaderMap[$normalizedType];
+        $loaderClass = $this->loaderMap[$fileType->value];
 
         // Resolve loader from container (allows dependency injection)
         return $this->container->make($loaderClass);
@@ -61,11 +60,11 @@ class DocumentLoaderFactory
     /**
      * Register a custom loader for a file type.
      *
-     * @param string $fileType The file type
+     * @param DocumentFileType $fileType The file type
      * @param class-string<DocumentLoader> $loaderClass The loader class
      * @return void
      */
-    public function register(string $fileType, string $loaderClass): void
+    public function register(DocumentFileType $fileType, string $loaderClass): void
     {
         if (!is_subclass_of($loaderClass, DocumentLoader::class)) {
             throw new \InvalidArgumentException(
@@ -73,7 +72,7 @@ class DocumentLoaderFactory
             );
         }
 
-        $this->loaderMap[strtolower($fileType)] = $loaderClass;
+        $this->loaderMap[$fileType->value] = $loaderClass;
     }
 
     /**

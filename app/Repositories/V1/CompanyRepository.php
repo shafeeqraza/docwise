@@ -2,6 +2,7 @@
 
 namespace App\Repositories\V1;
 
+use App\Enums\CompanyStatus;
 use App\Models\Company;
 use App\Repositories\V1\Contracts\CompanyRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -119,10 +120,10 @@ class CompanyRepository implements CompanyRepositoryInterface
      * Update company status.
      *
      * @param Company $company
-     * @param string $status
+     * @param CompanyStatus $status
      * @return bool
      */
-    public function updateStatus(Company $company, string $status): bool
+    public function updateStatus(Company $company, CompanyStatus $status): bool
     {
         return $company->update(['status' => $status]);
     }

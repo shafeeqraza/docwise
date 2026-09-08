@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\FeedbackType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -17,7 +18,7 @@ return new class extends Migration
             $table->foreignId('message_id')->constrained('chat_messages')->cascadeOnDelete();
             $table->foreignId('session_id')->constrained('chat_sessions')->cascadeOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->enum('feedback_type', ['thumbs_up', 'thumbs_down', 'rating', 'comment']);
+            $table->enum('feedback_type', FeedbackType::values());
             $table->integer('rating')->nullable();
             $table->text('comment')->nullable();
             $table->json('categories')->nullable();

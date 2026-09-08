@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -44,6 +45,7 @@ class User extends Authenticatable
             'is_super_admin' => 'boolean',
             'can_impersonate' => 'boolean',
             'last_login_at' => 'datetime',
+            'role' => UserRole::class,
         ];
     }
 
@@ -82,7 +84,7 @@ class User extends Authenticatable
     // Helper methods
     public function isSuperAdmin(): bool
     {
-        return $this->is_super_admin || $this->role === 'super_admin';
+        return $this->is_super_admin || $this->role === UserRole::SUPER_ADMIN;
     }
 
     public function isCompanyAdmin(): bool
@@ -91,7 +93,7 @@ class User extends Authenticatable
             return true;
         }
 
-        return $this->role === 'admin';
+        return $this->role === UserRole::ADMIN;
     }
 
     public function hasPermission(string $permission): bool

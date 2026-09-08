@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\DocumentVersionProcessingState;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +33,7 @@ class DocumentVersion extends Model
             'chunk_strategy' => 'array',
             'processing_started_at' => 'datetime',
             'processing_completed_at' => 'datetime',
+            'processing_state' => DocumentVersionProcessingState::class,
         ];
     }
 
@@ -48,17 +51,17 @@ class DocumentVersion extends Model
     // Helper methods
     public function isCompleted(): bool
     {
-        return $this->processing_state === 'completed';
+        return $this->processing_state === DocumentVersionProcessingState::COMPLETED;
     }
 
     public function isFailed(): bool
     {
-        return $this->processing_state === 'failed';
+        return $this->processing_state === DocumentVersionProcessingState::FAILED;
     }
 
     public function isProcessing(): bool
     {
-        return in_array($this->processing_state, ['pending', 'parsing', 'chunking', 'embedding']);
+        return ! $this->processing_state->isTerminal();
     }
 
     public function getProcessingDuration(): ?int
@@ -72,11 +75,11 @@ class DocumentVersion extends Model
 
     public function getProgressPercentage(): int
     {
-        $states = ['pending', 'parsing', 'chunking', 'embedding', 'completed'];
+        $states = DocumentVersionProcessingState::progression();
         $currentIndex = array_search($this->processing_state, $states);
 
         if ($currentIndex === false) return 0;
-        if ($this->processing_state === 'failed') return 0;
+        if ($this->processing_state === DocumentVersionProcessingState::FAILED) return 0;
 
         return (int) (($currentIndex / (count($states) - 1)) * 100);
     }

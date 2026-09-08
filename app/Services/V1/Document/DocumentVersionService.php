@@ -2,6 +2,7 @@
 
 namespace App\Services\V1\Document;
 
+use App\Enums\DocumentVersionProcessingState;
 use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Repositories\V1\DocumentVersionRepository;
@@ -20,7 +21,7 @@ class DocumentVersionService
         return $this->repository->create([
             'document_id' => $document->id,
             'version' => 1,
-            'processing_state' => 'pending',
+            'processing_state' => DocumentVersionProcessingState::PENDING,
         ]);
     }
 

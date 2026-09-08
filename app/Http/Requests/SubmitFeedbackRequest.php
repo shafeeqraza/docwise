@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\FeedbackType;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class SubmitFeedbackRequest extends FormRequest
 {
@@ -31,7 +33,7 @@ class SubmitFeedbackRequest extends FormRequest
             'type' => [
                 'required',
                 'string',
-                'in:thumbs_up,thumbs_down,rating',
+                Rule::enum(FeedbackType::class)->except(FeedbackType::COMMENT),
             ],
             'rating' => [
                 'nullable',
@@ -59,7 +61,7 @@ class SubmitFeedbackRequest extends FormRequest
             'message_id.required' => 'Message ID is required',
             'message_id.exists' => 'Message not found',
             'type.required' => 'Feedback type is required',
-            'type.in' => 'Feedback type must be one of: thumbs_up, thumbs_down, rating',
+            'type.enum' => 'Feedback type must be one of: thumbs_up, thumbs_down, rating',
             'rating.required_if' => 'Rating is required when feedback type is rating',
             'rating.min' => 'Rating must be at least 1',
             'rating.max' => 'Rating must not exceed 5',

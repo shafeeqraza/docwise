@@ -2,7 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\CompanyBillingCycle;
+use App\Enums\CompanyPaymentStatus;
+use App\Enums\CompanyStatus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
@@ -68,7 +72,7 @@ class UpdateCompanyRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'string',
-                'in:active,suspended,trial',
+                Rule::enum(CompanyStatus::class),
             ],
             'subscription_plan' => [
                 'sometimes',
@@ -80,7 +84,7 @@ class UpdateCompanyRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'string',
-                'in:monthly,yearly',
+                Rule::enum(CompanyBillingCycle::class),
             ],
             'next_billing_date' => [
                 'sometimes',
@@ -91,7 +95,7 @@ class UpdateCompanyRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'string',
-                'in:active,past_due,cancelled',
+                Rule::enum(CompanyPaymentStatus::class),
             ],
             'allow_overages' => [
                 'sometimes',
@@ -121,10 +125,10 @@ class UpdateCompanyRequest extends FormRequest
             'email.email' => 'Please provide a valid email address',
             'email.max' => 'Email address must not exceed 255 characters',
             'phone.max' => 'Phone number must not exceed 50 characters',
-            'status.in' => 'Status must be one of: active, suspended, trial',
-            'billing_cycle.in' => 'Billing cycle must be either monthly or yearly',
+            'status.enum' => 'Status must be one of: ' . implode(', ', CompanyStatus::values()),
+            'billing_cycle.enum' => 'Billing cycle must be one of: ' . implode(', ', CompanyBillingCycle::values()),
             'next_billing_date.date' => 'Next billing date must be a valid date',
-            'payment_status.in' => 'Payment status must be one of: active, past_due, cancelled',
+            'payment_status.enum' => 'Payment status must be one of: ' . implode(', ', CompanyPaymentStatus::values()),
             'allow_overages.boolean' => 'Allow overages must be a boolean value',
             'settings.array' => 'Settings must be an array',
         ];

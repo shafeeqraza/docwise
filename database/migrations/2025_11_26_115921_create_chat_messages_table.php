@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\ChatMessageContentType;
+use App\Enums\ChatMessageRole;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,9 +17,9 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->foreignId('session_id')->constrained('chat_sessions')->cascadeOnDelete();
-            $table->enum('role', ['user', 'assistant', 'system']);
+            $table->enum('role', ChatMessageRole::values());
             $table->text('content');
-            $table->enum('content_type', ['text', 'markdown', 'html'])->default('text');
+            $table->enum('content_type', ChatMessageContentType::values())->default(ChatMessageContentType::TEXT);
             $table->integer('tokens_prompt')->nullable();
             $table->integer('tokens_completion')->nullable();
             $table->string('model_used', 100)->nullable();

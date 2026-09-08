@@ -10,6 +10,7 @@ use App\Services\V1\Contracts\ApiKeyUsageServiceInterface;
 use App\Services\V1\Contracts\ChatServiceInterface;
 use App\Services\V1\DTOs\GetChatMessagesDTO;
 use App\Services\V1\DTOs\SendChatMessageDTO;
+use App\Enums\FeedbackType;
 use App\Services\V1\DTOs\SubmitFeedbackDTO;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -144,7 +145,7 @@ class WidgetChatController extends Controller
                 companyId: $companyId,
                 sessionUuid: $session,
                 messageId: $validated['message_id'],
-                type: $validated['type'],
+                type: FeedbackType::from($validated['type']),
                 rating: $validated['rating'] ?? null,
                 comment: $validated['comment'] ?? null
             );

@@ -23,6 +23,8 @@ class ChatHistoryProvider
      * @param ChatSession $session
      * @param int $maxHistory Maximum number of history messages
      * @return array<int, array{role: string, content: string}>
+     *         Roles are unwrapped to their backing string: this feeds LLM
+     *         provider payloads, not the database.
      */
     public function getHistory(ChatSession $session, int $maxHistory): array
     {
@@ -35,7 +37,7 @@ class ChatHistoryProvider
         $history = [];
         foreach ($messages as $message) {
             $history[] = [
-                'role' => $message->role,
+                'role' => $message->role->value,
                 'content' => $message->content,
             ];
         }

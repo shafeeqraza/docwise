@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\FeedbackType;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,6 +30,7 @@ class Feedback extends Model
         return [
             'categories' => 'array',
             'metadata' => 'array',
+            'feedback_type' => FeedbackType::class,
         ];
     }
 
@@ -61,19 +64,19 @@ class Feedback extends Model
     // Helper methods
     public function isPositive(): bool
     {
-        return $this->feedback_type === 'thumbs_up' || 
-               ($this->feedback_type === 'rating' && $this->rating >= 4);
+        return $this->feedback_type === FeedbackType::THUMBS_UP
+            || ($this->feedback_type === FeedbackType::RATING && $this->rating >= 4);
     }
 
     public function isNegative(): bool
     {
-        return $this->feedback_type === 'thumbs_down' || 
-               ($this->feedback_type === 'rating' && $this->rating <= 2);
+        return $this->feedback_type === FeedbackType::THUMBS_DOWN
+            || ($this->feedback_type === FeedbackType::RATING && $this->rating <= 2);
     }
 
     public function isNeutral(): bool
     {
-        return $this->feedback_type === 'rating' && $this->rating === 3;
+        return $this->feedback_type === FeedbackType::RATING && $this->rating === 3;
     }
 
     public function getSentiment(): string
@@ -110,7 +113,7 @@ class Feedback extends Model
 
     public function getFormattedRating(): string
     {
-        if ($this->feedback_type !== 'rating' || !$this->rating) {
+        if ($this->feedback_type !== FeedbackType::RATING || !$this->rating) {
             return '';
         }
         

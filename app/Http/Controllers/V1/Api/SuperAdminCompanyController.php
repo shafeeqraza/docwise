@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\V1\Api;
 
+use App\Enums\CompanyBillingCycle;
+use App\Enums\CompanyPaymentStatus;
+use App\Enums\CompanyStatus;
 use App\Services\V1\Contracts\SuperAdminCompanyServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\V1\Concerns\ResponseHandler;
@@ -44,9 +47,9 @@ class SuperAdminCompanyController extends Controller
         $perPage = min(max($perPage, 1), 100); // Limit between 1 and 100
 
         $dto = new ListCompaniesDTO(
-            status: $request->query('status'),
+            status: CompanyStatus::tryFrom((string) $request->query('status')),
             subscriptionPlan: $request->query('subscription_plan'),
-            paymentStatus: $request->query('payment_status'),
+            paymentStatus: CompanyPaymentStatus::tryFrom((string) $request->query('payment_status')),
             search: $request->query('search'),
             perPage: $perPage
         );
@@ -91,10 +94,10 @@ class SuperAdminCompanyController extends Controller
                 slug: $validated['slug'] ?? null,
                 email: $validated['email'] ?? null,
                 phone: $validated['phone'] ?? null,
-                status: $validated['status'] ?? 'active',
+                status: CompanyStatus::from($validated['status'] ?? CompanyStatus::ACTIVE->value),
                 subscriptionPlan: $validated['subscription_plan'] ?? 'basic',
-                billingCycle: $validated['billing_cycle'] ?? 'monthly',
-                paymentStatus: $validated['payment_status'] ?? 'active',
+                billingCycle: CompanyBillingCycle::from($validated['billing_cycle'] ?? CompanyBillingCycle::MONTHLY->value),
+                paymentStatus: CompanyPaymentStatus::from($validated['payment_status'] ?? CompanyPaymentStatus::ACTIVE->value),
                 allowOverages: $validated['allow_overages'] ?? false,
                 settings: $validated['settings'] ?? null
             );
@@ -147,7 +150,7 @@ class SuperAdminCompanyController extends Controller
 
             $oldData = [
                 'name' => $companyResource->name,
-                'status' => $companyResource->status,
+                'status' => $companyResource->status?->value,
                 'subscription_plan' => $companyResource->subscription_plan,
             ];
 
@@ -157,10 +160,10 @@ class SuperAdminCompanyController extends Controller
                 slug: $validated['slug'] ?? null,
                 email: $validated['email'] ?? null,
                 phone: $validated['phone'] ?? null,
-                status: $validated['status'] ?? null,
+                status: CompanyStatus::tryFrom($validated['status'] ?? ''),
                 subscriptionPlan: $validated['subscription_plan'] ?? null,
-                billingCycle: $validated['billing_cycle'] ?? null,
-                paymentStatus: $validated['payment_status'] ?? null,
+                billingCycle: CompanyBillingCycle::tryFrom($validated['billing_cycle'] ?? ''),
+                paymentStatus: CompanyPaymentStatus::tryFrom($validated['payment_status'] ?? ''),
                 allowOverages: $validated['allow_overages'] ?? null,
                 settings: $validated['settings'] ?? null
             );
@@ -178,7 +181,7 @@ class SuperAdminCompanyController extends Controller
                     'old_data' => $oldData,
                     'new_data' => [
                         'name' => $updatedCompany->name,
-                        'status' => $updatedCompany->status,
+                        'status' => $updatedCompany->status?->value,
                         'subscription_plan' => $updatedCompany->subscription_plan,
                     ],
                 ],

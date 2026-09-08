@@ -1,11 +1,13 @@
 <?php
 
+use App\Enums\DocumentFileType;
+use App\Enums\DocumentSourceType;
+use App\Enums\DocumentStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -17,9 +19,9 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->string('title', 500);
             $table->text('description')->nullable();
-            $table->enum('source_type', ['upload', 'url', 'api'])->default('upload');
-            $table->enum('file_type', ['pdf', 'docx', 'txt', 'html', 'md']);
-            $table->enum('status', ['uploaded', 'processing', 'completed', 'failed', 'archived'])->default('uploaded');
+            $table->enum('source_type', DocumentSourceType::values())->default(DocumentSourceType::UPLOAD);
+            $table->enum('file_type', DocumentFileType::values());
+            $table->enum('status', DocumentStatus::values())->default(DocumentStatus::UPLOADED);
             $table->foreignId('uploaded_by')->constrained('users')->restrictOnDelete();
             $table->string('public_id', 1000);
             $table->string('file_url', 2000)->nullable();

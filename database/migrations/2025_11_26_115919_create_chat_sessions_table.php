@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\ChatSessionChannel;
+use App\Enums\ChatSessionStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -16,9 +18,9 @@ return new class extends Migration
             $table->uuid('uuid')->unique();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->string('external_user_id')->nullable();
-            $table->enum('channel', ['web', 'api', 'widget', 'slack', 'teams'])->default('web');
+            $table->enum('channel', ChatSessionChannel::values())->default(ChatSessionChannel::WEB);
             $table->string('title', 500)->nullable();
-            $table->enum('status', ['active', 'resolved', 'escalated', 'archived'])->default('active');
+            $table->enum('status', ChatSessionStatus::values())->default(ChatSessionStatus::ACTIVE);
             $table->string('language', 10)->default('en');
             $table->json('user_metadata')->nullable();
             $table->json('context')->nullable();

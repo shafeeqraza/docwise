@@ -2,6 +2,7 @@
 
 namespace App\Services\V1\Company;
 
+use App\Enums\UsageMetricType;
 use App\Models\CompanyApiKey;
 use App\Models\UsageMetric;
 use Illuminate\Support\Facades\Cache;
@@ -52,14 +53,14 @@ class ApiKeyUsageService
 
         if ($period === 'today') {
             $query->where('period_start', now()->startOfDay())
-                ->where('metric_type', 'daily');
+                ->where('metric_type', UsageMetricType::DAILY);
         } elseif ($period === 'all_time') {
             // Get all monthly metrics
-            $query->where('metric_type', 'monthly');
+            $query->where('metric_type', UsageMetricType::MONTHLY);
         } else {
             // Default to this month
             $query->where('period_start', now()->startOfMonth())
-                ->where('metric_type', 'monthly');
+                ->where('metric_type', UsageMetricType::MONTHLY);
         }
 
         $metrics = $query->get();
@@ -115,7 +116,7 @@ class ApiKeyUsageService
             [
                 'company_id' => $companyId,
                 'period_start' => $periodStart,
-                'metric_type' => 'daily',
+                'metric_type' => UsageMetricType::DAILY,
             ],
             [
                 'period_end' => $periodEnd,
@@ -126,7 +127,7 @@ class ApiKeyUsageService
             if ($value > 0) {
                 UsageMetric::where('company_id', $companyId)
                     ->where('period_start', $periodStart)
-                    ->where('metric_type', 'daily')
+                    ->where('metric_type', UsageMetricType::DAILY)
                     ->increment($field, $value);
             }
         }
@@ -148,7 +149,7 @@ class ApiKeyUsageService
             [
                 'company_id' => $companyId,
                 'period_start' => $periodStart,
-                'metric_type' => 'monthly',
+                'metric_type' => UsageMetricType::MONTHLY,
             ],
             [
                 'period_end' => $periodEnd,
@@ -159,7 +160,7 @@ class ApiKeyUsageService
             if ($value > 0) {
                 UsageMetric::where('company_id', $companyId)
                     ->where('period_start', $periodStart)
-                    ->where('metric_type', 'monthly')
+                    ->where('metric_type', UsageMetricType::MONTHLY)
                     ->increment($field, $value);
             }
         }

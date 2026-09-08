@@ -33,7 +33,7 @@ class TokenService
             abilities: [
                 'super_admin',
                 'company_id' => $user->company_id,
-                'role' => $user->role,
+                'role' => $user->role?->value,
             ]
         );
     }

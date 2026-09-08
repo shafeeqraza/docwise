@@ -3,6 +3,7 @@
 namespace App\Domains\RAG\Services;
 
 use App\Domains\RAG\DTOs\ChunkDTO;
+use App\Enums\UsageMetricType;
 use App\Models\UsageMetric;
 
 /**
@@ -154,7 +155,7 @@ class UsageMetricService
             [
                 'company_id' => $companyId,
                 'period_start' => $periodStart,
-                'metric_type' => 'daily',
+                'metric_type' => UsageMetricType::DAILY,
             ],
             [
                 'period_end' => $periodEnd,
@@ -165,7 +166,7 @@ class UsageMetricService
         foreach ($increments as $field => $value) {
             UsageMetric::where('company_id', $companyId)
                 ->where('period_start', $periodStart)
-                ->where('metric_type', 'daily')
+                ->where('metric_type', UsageMetricType::DAILY)
                 ->increment($field, $value);
         }
 
@@ -198,7 +199,7 @@ class UsageMetricService
             [
                 'company_id' => $companyId,
                 'period_start' => $periodStart,
-                'metric_type' => 'monthly',
+                'metric_type' => UsageMetricType::MONTHLY,
             ],
             [
                 'period_end' => $periodEnd,
@@ -209,7 +210,7 @@ class UsageMetricService
         foreach ($increments as $field => $value) {
             UsageMetric::where('company_id', $companyId)
                 ->where('period_start', $periodStart)
-                ->where('metric_type', 'monthly')
+                ->where('metric_type', UsageMetricType::MONTHLY)
                 ->increment($field, $value);
         }
 
@@ -228,11 +229,11 @@ class UsageMetricService
      * Get usage summary for a company.
      *
      * @param int $companyId Company ID
-     * @param string $period Period type (daily, weekly, monthly)
+     * @param UsageMetricType $period Period type
      * @param int $limit Number of records to retrieve
      * @return array<UsageMetric> Usage metrics
      */
-    public function getUsageSummary(int $companyId, string $period = 'monthly', int $limit = 12): array
+    public function getUsageSummary(int $companyId, UsageMetricType $period = UsageMetricType::MONTHLY, int $limit = 12): array
     {
         return UsageMetric::where('company_id', $companyId)
             ->where('metric_type', $period)
@@ -254,7 +255,7 @@ class UsageMetricService
 
         return UsageMetric::where('company_id', $companyId)
             ->where('period_start', $periodStart)
-            ->where('metric_type', 'monthly')
+            ->where('metric_type', UsageMetricType::MONTHLY)
             ->first();
     }
 }

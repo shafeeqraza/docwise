@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\UsageMetricType;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -35,6 +37,7 @@ class UsageMetric extends Model
             'period_start' => 'date',
             'period_end' => 'date',
             'costs' => 'array',
+            'metric_type' => UsageMetricType::class,
         ];
     }
 
@@ -105,17 +108,17 @@ class UsageMetric extends Model
 
     public function isDaily(): bool
     {
-        return $this->metric_type === 'daily';
+        return $this->metric_type === UsageMetricType::DAILY;
     }
 
     public function isWeekly(): bool
     {
-        return $this->metric_type === 'weekly';
+        return $this->metric_type === UsageMetricType::WEEKLY;
     }
 
     public function isMonthly(): bool
     {
-        return $this->metric_type === 'monthly';
+        return $this->metric_type === UsageMetricType::MONTHLY;
     }
 
     public function getPeriodLabel(): string

@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\BillingInvoiceStatus;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -32,6 +34,7 @@ class BillingInvoice extends Model
             'overage_amount' => 'decimal:2',
             'total_amount' => 'decimal:2',
             'paid_at' => 'datetime',
+            'status' => BillingInvoiceStatus::class,
         ];
     }
 
@@ -71,22 +74,22 @@ class BillingInvoice extends Model
 
     public function isDraft(): bool
     {
-        return $this->status === 'draft';
+        return $this->status === BillingInvoiceStatus::DRAFT;
     }
 
     public function isSent(): bool
     {
-        return $this->status === 'sent';
+        return $this->status === BillingInvoiceStatus::SENT;
     }
 
     public function isPaid(): bool
     {
-        return $this->status === 'paid';
+        return $this->status === BillingInvoiceStatus::PAID;
     }
 
     public function isOverdue(): bool
     {
-        return $this->status === 'overdue';
+        return $this->status === BillingInvoiceStatus::OVERDUE;
     }
 
     public function hasOverage(): bool
@@ -128,14 +131,14 @@ class BillingInvoice extends Model
     public function markAsPaid(): void
     {
         $this->update([
-            'status' => 'paid',
+            'status' => BillingInvoiceStatus::PAID,
             'paid_at' => now(),
         ]);
     }
 
     public function markAsOverdue(): void
     {
-        $this->update(['status' => 'overdue']);
+        $this->update(['status' => BillingInvoiceStatus::OVERDUE]);
     }
 
     public function getPaymentUrl(): ?string

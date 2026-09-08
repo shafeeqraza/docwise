@@ -2,7 +2,11 @@
 
 namespace App\Services\V1\Document;
 
+use App\Enums\DocumentFileType;
+use App\Enums\DocumentSourceType;
+use App\Enums\DocumentStatus;
 use App\Events\DocumentUploaded;
+use App\Exceptions\DocumentValidationException;
 use App\Services\V1\Contracts\DocumentServiceInterface;
 use App\Http\Resources\DocumentResource;
 use App\Http\Resources\PaginatedResourceCollection;
@@ -41,14 +45,21 @@ class DocumentService implements DocumentServiceInterface
             // Get file metadata
             $fileMetadata = $this->fileStorageService->getFileMetadata($dto->file);
 
+            // The uploaded extension is user-controlled, so it may still fall outside
+            // the file types the schema accepts even after request validation.
+            $fileType = DocumentFileType::tryFrom($fileMetadata['extension'])
+                ?? throw new DocumentValidationException(
+                    "Unsupported file type: {$fileMetadata['extension']}"
+                );
+
             // Create document record
             $document = $this->documentRepository->create([
                 'company_id' => $dto->companyId,
                 'title' => $dto->title ?? $fileMetadata['original_filename'],
                 'description' => $dto->description,
-                'source_type' => 'upload',
-                'file_type' => $fileMetadata['extension'],
-                'status' => 'uploaded',
+                'source_type' => DocumentSourceType::UPLOAD,
+                'file_type' => $fileType,
+                'status' => DocumentStatus::UPLOADED,
                 'uploaded_by' => $dto->userId,
                 'public_id' => $storageResult['public_id'],
                 'file_url' => $storageResult['secure_url'],

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UsageMetricType;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -16,7 +17,7 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->date('period_start');
             $table->date('period_end');
-            $table->enum('metric_type', ['daily', 'weekly', 'monthly']);
+            $table->enum('metric_type', UsageMetricType::values());
             $table->integer('documents_uploaded')->default(0);
             $table->integer('documents_processed')->default(0);
             $table->integer('chunks_created')->default(0);

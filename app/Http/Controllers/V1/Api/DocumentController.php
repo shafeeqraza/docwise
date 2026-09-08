@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\V1\Api;
 
+use App\Enums\DocumentFileType;
+use App\Enums\DocumentStatus;
 use App\Services\V1\Contracts\DocumentServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\V1\Concerns\ResponseHandler;
@@ -75,8 +77,8 @@ class DocumentController extends Controller
 
         $dto = new ListDocumentsDTO(
             companyId: $companyId,
-            status: $request->query('status'),
-            fileType: $request->query('file_type'),
+            status: DocumentStatus::tryFrom((string) $request->query('status')),
+            fileType: DocumentFileType::tryFrom((string) $request->query('file_type')),
             search: $request->query('search'),
             perPage: (int) $request->query('per_page', 20)
         );
@@ -90,8 +92,8 @@ class DocumentController extends Controller
             targetCompanyId: $companyId,
             details: [
                 'filters' => [
-                    'status' => $dto->status,
-                    'file_type' => $dto->fileType,
+                    'status' => $dto->status?->value,
+                    'file_type' => $dto->fileType?->value,
                     'search' => $dto->search,
                 ],
                 'result_count' => $resource->collection->count(),

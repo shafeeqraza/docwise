@@ -2,6 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Enums\CompanyBillingCycle;
+use App\Enums\CompanyPaymentStatus;
+use App\Enums\CompanyStatus;
 use App\Models\Company;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
@@ -19,11 +22,11 @@ class CompanySeeder extends Seeder
                 'slug' => 'acme-corp',
                 'email' => 'contact@acme.com',
                 'phone' => '+1-555-0100',
-                'status' => 'active',
+                'status' => CompanyStatus::ACTIVE,
                 'subscription_plan' => 'professional',
-                'billing_cycle' => 'monthly',
+                'billing_cycle' => CompanyBillingCycle::MONTHLY,
                 'next_billing_date' => now()->addMonth(),
-                'payment_status' => 'active',
+                'payment_status' => CompanyPaymentStatus::ACTIVE,
                 'allow_overages' => true,
                 'settings' => [
                     'max_documents' => 500,
@@ -38,11 +41,11 @@ class CompanySeeder extends Seeder
                 'slug' => 'techstart',
                 'email' => 'hello@techstart.com',
                 'phone' => '+1-555-0200',
-                'status' => 'active',
+                'status' => CompanyStatus::ACTIVE,
                 'subscription_plan' => 'starter',
-                'billing_cycle' => 'monthly',
+                'billing_cycle' => CompanyBillingCycle::MONTHLY,
                 'next_billing_date' => now()->addMonth(),
-                'payment_status' => 'active',
+                'payment_status' => CompanyPaymentStatus::ACTIVE,
                 'allow_overages' => false,
                 'settings' => [
                     'max_documents' => 50,
@@ -56,11 +59,11 @@ class CompanySeeder extends Seeder
                 'slug' => 'enterprise-solutions',
                 'email' => 'enterprise@example.com',
                 'phone' => '+1-555-0300',
-                'status' => 'active',
+                'status' => CompanyStatus::ACTIVE,
                 'subscription_plan' => 'enterprise',
-                'billing_cycle' => 'yearly',
+                'billing_cycle' => CompanyBillingCycle::YEARLY,
                 'next_billing_date' => now()->addYear(),
-                'payment_status' => 'active',
+                'payment_status' => CompanyPaymentStatus::ACTIVE,
                 'allow_overages' => true,
                 'settings' => [
                     'max_documents' => -1, // Unlimited
@@ -78,11 +81,11 @@ class CompanySeeder extends Seeder
                 'name' => 'Trial Company',
                 'slug' => 'trial-company',
                 'email' => 'trial@example.com',
-                'status' => 'trial',
+                'status' => CompanyStatus::TRIAL,
                 'subscription_plan' => 'starter',
-                'billing_cycle' => 'monthly',
+                'billing_cycle' => CompanyBillingCycle::MONTHLY,
                 'next_billing_date' => now()->addDays(14), // 14-day trial
-                'payment_status' => 'active',
+                'payment_status' => CompanyPaymentStatus::ACTIVE,
                 'allow_overages' => false,
                 'settings' => [
                     'max_documents' => 10,
@@ -95,10 +98,10 @@ class CompanySeeder extends Seeder
                 'name' => 'Suspended Corp',
                 'slug' => 'suspended-corp',
                 'email' => 'suspended@example.com',
-                'status' => 'suspended',
+                'status' => CompanyStatus::SUSPENDED,
                 'subscription_plan' => 'professional',
-                'billing_cycle' => 'monthly',
-                'payment_status' => 'past_due',
+                'billing_cycle' => CompanyBillingCycle::MONTHLY,
+                'payment_status' => CompanyPaymentStatus::PAST_DUE,
                 'allow_overages' => false,
                 'settings' => [
                     'max_documents' => 500,

@@ -61,7 +61,7 @@ class DocumentIngestionPipeline
         $this->updateProgress($options, ++$currentStep, $totalSteps, 'Loading document');
         $text = $this->benchmarkStep('Loading document', function() use ($document) {
             return $this->loadDocument($document);
-        }, ['file_type' => $document->fileType]);
+        }, ['file_type' => $document->fileType->value]);
         $stepTimings['Loading document'] = $this->getLastBenchmarkDuration();
 
         // Step 2: Chunk text using TextChunkingService (returns ChunkDTOs without IDs)

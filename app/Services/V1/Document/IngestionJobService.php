@@ -2,6 +2,8 @@
 
 namespace App\Services\V1\Document;
 
+use App\Enums\IngestionJobStatus;
+use App\Enums\IngestionJobType;
 use App\Models\Document;
 use App\Models\IngestionJob;
 use App\Repositories\V1\IngestionJobRepository;
@@ -20,8 +22,8 @@ class IngestionJobService
         return $this->repository->create([
             'company_id' => $document->company_id,
             'document_id' => $document->id,
-            'job_type' => 'parse_document', // Valid enum value from migration
-            'status' => 'queued',
+            'job_type' => IngestionJobType::PARSE_DOCUMENT,
+            'status' => IngestionJobStatus::QUEUED,
             'priority' => 0, // Integer as per migration (0 = normal, higher = higher priority)
             'attempts' => 0,
             'max_attempts' => 3,

@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\IngestionJobType;
+use App\Enums\IngestionJobStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -16,8 +18,8 @@ return new class extends Migration
             $table->uuid('uuid')->unique();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->foreignId('document_id')->nullable()->constrained()->cascadeOnDelete();
-            $table->enum('job_type', ['parse_document', 'generate_embeddings', 'sync_qdrant', 'cleanup']);
-            $table->enum('status', ['queued', 'processing', 'completed', 'failed', 'cancelled'])->default('queued');
+            $table->enum('job_type', IngestionJobType::values());
+            $table->enum('status', IngestionJobStatus::values())->default(IngestionJobStatus::QUEUED);
             $table->integer('priority')->default(0);
             $table->integer('attempts')->default(0);
             $table->integer('max_attempts')->default(3);

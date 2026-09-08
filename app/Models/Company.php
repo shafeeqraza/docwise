@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\CompanyBillingCycle;
+use App\Enums\CompanyPaymentStatus;
+use App\Enums\CompanyStatus;
+use App\Enums\UsageMetricType;
 use App\Exceptions\ChunkOverlapNotSetException;
 use App\Exceptions\ChunkSizeNotSetException;
 use App\Exceptions\EmbeddingException;
@@ -38,6 +42,9 @@ class Company extends Model
             'settings' => 'array',
             'allow_overages' => 'boolean',
             'next_billing_date' => 'date',
+            'status' => CompanyStatus::class,
+            'billing_cycle' => CompanyBillingCycle::class,
+            'payment_status' => CompanyPaymentStatus::class,
         ];
     }
 
@@ -89,7 +96,7 @@ class Company extends Model
     // Helper methods
     public function isActive(): bool
     {
-        return $this->status === 'active';
+        return $this->status === CompanyStatus::ACTIVE;
     }
 
     public function getMaxDocuments(): int
@@ -140,7 +147,7 @@ class Company extends Model
         $endOfMonth = now()->endOfMonth();
 
         return (int) UsageMetric::where('company_id', $this->id)
-            ->where('metric_type', 'monthly')
+            ->where('metric_type', UsageMetricType::MONTHLY)
             ->whereBetween('period_start', [$startOfMonth, $endOfMonth])
             ->sum(DB::raw('tokens_prompt + tokens_completion'));
     }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -19,7 +20,7 @@ return new class extends Migration
             $table->string('email');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-            $table->enum('role', ['super_admin', 'admin', 'agent', 'api_user'])->default('agent');
+            $table->enum('role', UserRole::values())->default(UserRole::AGENT);
             $table->string('api_token', 80)->unique()->nullable();
             $table->json('permissions')->nullable();
             $table->boolean('is_super_admin')->default(false);

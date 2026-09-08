@@ -61,7 +61,7 @@ class SuperAdminImpersonationController extends Controller
                     'uuid' => $company->uuid,
                     'name' => $company->name,
                     'slug' => $company->slug,
-                    'status' => $company->status,
+                    'status' => $company->status?->value,
                 ],
                 'usage' => [
                     'header' => 'X-Company-Id',

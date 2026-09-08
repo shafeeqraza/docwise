@@ -2,6 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Enums\CompanyBillingCycle;
+use App\Enums\CompanyPaymentStatus;
+use App\Enums\CompanyStatus;
+use App\Enums\UserRole;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -23,10 +27,10 @@ class SuperAdminSeeder extends Seeder
                 'uuid' => Str::uuid(),
                 'name' => 'System',
                 'slug' => 'system',
-                'status' => 'active',
+                'status' => CompanyStatus::ACTIVE,
                 'subscription_plan' => 'system',
-                'billing_cycle' => 'monthly',
-                'payment_status' => 'active',
+                'billing_cycle' => CompanyBillingCycle::MONTHLY,
+                'payment_status' => CompanyPaymentStatus::ACTIVE,
             ]
         );
 
@@ -36,7 +40,7 @@ class SuperAdminSeeder extends Seeder
                 'name' => 'Super Admin',
                 'email' => 'superadmin@example.com',
                 'password' => Hash::make('password123'),
-                'role' => 'super_admin',
+                'role' => UserRole::SUPER_ADMIN,
                 'is_super_admin' => true,
                 'can_impersonate' => true,
                 'company_id' => $systemCompany->id,
@@ -47,7 +51,7 @@ class SuperAdminSeeder extends Seeder
                 'name' => 'System Administrator',
                 'email' => 'admin@system.com',
                 'password' => Hash::make('admin123'),
-                'role' => 'super_admin',
+                'role' => UserRole::SUPER_ADMIN,
                 'is_super_admin' => true,
                 'can_impersonate' => true,
                 'company_id' => $systemCompany->id,
@@ -65,7 +69,7 @@ class SuperAdminSeeder extends Seeder
             } else {
                 // Update existing user to be super admin
                 $existingUser->update([
-                    'role' => 'super_admin',
+                    'role' => UserRole::SUPER_ADMIN,
                     'is_super_admin' => true,
                     'can_impersonate' => true,
                     'company_id' => $systemCompany->id,

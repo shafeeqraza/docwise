@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use App\Enums\ChatMessageContentType;
+use App\Enums\ChatMessageRole;
+use App\Enums\FeedbackType;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -35,6 +39,8 @@ class ChatMessage extends Model
             'citations' => 'array',
             'temperature' => 'decimal:2',
             'confidence_score' => 'decimal:3',
+            'role' => ChatMessageRole::class,
+            'content_type' => ChatMessageContentType::class,
         ];
     }
 
@@ -68,17 +74,17 @@ class ChatMessage extends Model
     // Helper methods
     public function isUser(): bool
     {
-        return $this->role === 'user';
+        return $this->role === ChatMessageRole::USER;
     }
 
     public function isAssistant(): bool
     {
-        return $this->role === 'assistant';
+        return $this->role === ChatMessageRole::ASSISTANT;
     }
 
     public function isSystem(): bool
     {
-        return $this->role === 'system';
+        return $this->role === ChatMessageRole::SYSTEM;
     }
 
     public function getTotalTokens(): int
@@ -98,12 +104,12 @@ class ChatMessage extends Model
 
     public function getFormattedContent(): string
     {
-        if ($this->content_type === 'markdown') {
+        if ($this->content_type === ChatMessageContentType::MARKDOWN) {
             // You might want to use a markdown parser here
             return $this->content;
         }
         
-        if ($this->content_type === 'html') {
+        if ($this->content_type === ChatMessageContentType::HTML) {
             return $this->content;
         }
         
@@ -119,7 +125,7 @@ class ChatMessage extends Model
         
         $previousMessage = ChatMessage::where('session_id', $this->session_id)
             ->where('created_at', '<', $this->created_at)
-            ->where('role', 'user')
+            ->where('role', ChatMessageRole::USER)
             ->orderBy('created_at', 'desc')
             ->first();
         
@@ -132,18 +138,18 @@ class ChatMessage extends Model
 
     public function hasPositiveFeedback(): bool
     {
-        return $this->feedback()->where('feedback_type', 'thumbs_up')->exists();
+        return $this->feedback()->where('feedback_type', FeedbackType::THUMBS_UP)->exists();
     }
 
     public function hasNegativeFeedback(): bool
     {
-        return $this->feedback()->where('feedback_type', 'thumbs_down')->exists();
+        return $this->feedback()->where('feedback_type', FeedbackType::THUMBS_DOWN)->exists();
     }
 
     public function getAverageRating(): ?float
     {
         $ratings = $this->feedback()
-            ->where('feedback_type', 'rating')
+            ->where('feedback_type', FeedbackType::RATING)
             ->whereNotNull('rating')
             ->pluck('rating');
         

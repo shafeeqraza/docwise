@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\IngestionJobType;
+use App\Enums\IngestionJobStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,6 +41,8 @@ class IngestionJob extends Model
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
             'failed_at' => 'datetime',
+            'status' => IngestionJobStatus::class,
+            'job_type' => IngestionJobType::class,
         ];
     }
 
@@ -70,22 +74,22 @@ class IngestionJob extends Model
     // Helper methods
     public function isCompleted(): bool
     {
-        return $this->status === 'completed';
+        return $this->status === IngestionJobStatus::COMPLETED;
     }
 
     public function isFailed(): bool
     {
-        return $this->status === 'failed';
+        return $this->status === IngestionJobStatus::FAILED;
     }
 
     public function isProcessing(): bool
     {
-        return $this->status === 'processing';
+        return $this->status === IngestionJobStatus::PROCESSING;
     }
 
     public function isPending(): bool
     {
-        return $this->status === 'queued';
+        return $this->status === IngestionJobStatus::QUEUED;
     }
 
     public function canRetry(): bool
@@ -96,7 +100,7 @@ class IngestionJob extends Model
     public function markAsStarted(): void
     {
         $this->update([
-            'status' => 'processing',
+            'status' => IngestionJobStatus::PROCESSING,
             'started_at' => now(),
             'attempts' => $this->attempts + 1,
         ]);
@@ -105,7 +109,7 @@ class IngestionJob extends Model
     public function markAsCompleted(array $progressData = []): void
     {
         $this->update([
-            'status' => 'completed',
+            'status' => IngestionJobStatus::COMPLETED,
             'completed_at' => now(),
             'progress_data' => array_merge($this->progress_data ?? [], $progressData),
         ]);
@@ -114,7 +118,7 @@ class IngestionJob extends Model
     public function markAsFailed(string $errorMessage, array $progressData = []): void
     {
         $this->update([
-            'status' => 'failed',
+            'status' => IngestionJobStatus::FAILED,
             'failed_at' => now(),
             'error_message' => $errorMessage,
             'progress_data' => array_merge($this->progress_data ?? [], $progressData),
@@ -123,7 +127,8 @@ class IngestionJob extends Model
 
     public function getDuration(): ?int
     {
-        if (!$this->started_at) return null;
+        if (!$this->started_at)
+            return null;
 
         $endTime = $this->completed_at ?? $this->failed_at ?? now();
         return $this->started_at->diffInSeconds($endTime);

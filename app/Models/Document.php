@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Enums\DocumentFileType;
+use App\Enums\DocumentSourceType;
+use App\Enums\DocumentStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -40,6 +43,9 @@ class Document extends Model
             'tags' => 'array',
             'metadata' => 'array',
             'processed_at' => 'datetime',
+            'source_type' => DocumentSourceType::class,
+            'file_type' => DocumentFileType::class,
+            'status' => DocumentStatus::class,
         ];
     }
 
@@ -88,17 +94,17 @@ class Document extends Model
     // Helper methods
     public function isProcessed(): bool
     {
-        return $this->status === 'completed';
+        return $this->status === DocumentStatus::COMPLETED;
     }
 
     public function isFailed(): bool
     {
-        return $this->status === 'failed';
+        return $this->status === DocumentStatus::FAILED;
     }
 
     public function isProcessing(): bool
     {
-        return in_array($this->status, ['processing', 'uploaded']);
+        return in_array($this->status, [DocumentStatus::PROCESSING, DocumentStatus::UPLOADED], true);
     }
 
     public function getLatestVersion(): ?DocumentVersion
@@ -113,7 +119,8 @@ class Document extends Model
 
     public function getFileSizeFormatted(): string
     {
-        if (!$this->file_size) return 'Unknown';
+        if (!$this->file_size)
+            return 'Unknown';
 
         $bytes = $this->file_size;
         $units = ['B', 'KB', 'MB', 'GB'];

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\BillingInvoiceStatus;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -20,7 +21,7 @@ return new class extends Migration
             $table->decimal('base_amount', 10, 2);
             $table->decimal('overage_amount', 10, 2)->default(0);
             $table->decimal('total_amount', 10, 2);
-            $table->enum('status', ['draft', 'sent', 'paid', 'overdue'])->default('draft');
+            $table->enum('status', BillingInvoiceStatus::values())->default(BillingInvoiceStatus::DRAFT);
             $table->string('stripe_invoice_id')->nullable();
             $table->timestamp('paid_at')->nullable();
             $table->timestamps();

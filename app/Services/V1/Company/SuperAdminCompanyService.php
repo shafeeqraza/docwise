@@ -2,6 +2,7 @@
 
 namespace App\Services\V1\Company;
 
+use App\Enums\CompanyStatus;
 use App\Services\V1\Contracts\SuperAdminCompanyServiceInterface;
 use App\Http\Resources\CompanyResource;
 use App\Http\Resources\PaginatedResourceCollection;
@@ -166,7 +167,7 @@ class SuperAdminCompanyService implements SuperAdminCompanyServiceInterface
             throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Company not found');
         }
 
-        $this->companyRepository->updateStatus($company, 'suspended');
+        $this->companyRepository->updateStatus($company, CompanyStatus::SUSPENDED);
         $company->refresh();
 
         return new CompanyResource($company);
@@ -185,7 +186,7 @@ class SuperAdminCompanyService implements SuperAdminCompanyServiceInterface
             throw new \Illuminate\Database\Eloquent\ModelNotFoundException('Company not found');
         }
 
-        $this->companyRepository->updateStatus($company, 'active');
+        $this->companyRepository->updateStatus($company, CompanyStatus::ACTIVE);
         $company->refresh();
 
         return new CompanyResource($company);

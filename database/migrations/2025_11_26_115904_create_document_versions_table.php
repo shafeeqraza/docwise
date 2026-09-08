@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\DocumentVersionProcessingState;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,7 +16,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('document_id')->constrained()->cascadeOnDelete();
             $table->integer('version')->default(1);
-            $table->enum('processing_state', ['pending', 'parsing', 'chunking', 'embedding', 'completed', 'failed'])->default('pending');
+            $table->enum('processing_state', DocumentVersionProcessingState::values())->default(DocumentVersionProcessingState::PENDING);
             $table->integer('chunk_count')->default(0);
             $table->integer('token_count')->default(0);
             $table->string('embedding_model', 100)->nullable();

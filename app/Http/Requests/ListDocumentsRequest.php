@@ -2,7 +2,10 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\DocumentFileType;
+use App\Enums\DocumentStatus;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ListDocumentsRequest extends FormRequest
 {
@@ -25,12 +28,12 @@ class ListDocumentsRequest extends FormRequest
             'status' => [
                 'nullable',
                 'string',
-                'in:uploaded,processing,completed,failed,archived',
+                Rule::enum(DocumentStatus::class),
             ],
             'file_type' => [
                 'nullable',
                 'string',
-                'in:pdf,docx,txt,html,md',
+                Rule::enum(DocumentFileType::class),
             ],
             'search' => [
                 'nullable',
@@ -59,8 +62,8 @@ class ListDocumentsRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'status.in' => 'Status must be one of: uploaded, processing, completed, failed, archived',
-            'file_type.in' => 'File type must be one of: pdf, docx, txt, html, md',
+            'status.enum' => 'Status must be one of: ' . implode(', ', DocumentStatus::values()),
+            'file_type.enum' => 'File type must be one of: ' . implode(', ', DocumentFileType::values()),
             'search.max' => 'Search term must not exceed 255 characters',
             'per_page.integer' => 'Per page must be an integer',
             'per_page.min' => 'Per page must be at least 1',

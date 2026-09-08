@@ -2,6 +2,9 @@
 
 namespace App\Domains\RAG\Services;
 
+use App\Enums\DocumentStatus;
+use App\Enums\DocumentVersionProcessingState;
+use App\Enums\IngestionJobStatus;
 use App\Models\Document;
 use App\Models\DocumentVersion;
 use App\Models\IngestionJob;
@@ -23,10 +26,10 @@ class DocumentProcessingStatusService
      */
     public function markAsProcessing(Document $document, DocumentVersion $version, IngestionJob $ingestionJob): void
     {
-        $document->update(['status' => 'processing']);
-        $version->update(['processing_state' => 'parsing']); // Use 'parsing' as first processing state
+        $document->update(['status' => DocumentStatus::PROCESSING]);
+        $version->update(['processing_state' => DocumentVersionProcessingState::PARSING]);
         $ingestionJob->update([
-            'status' => 'processing',
+            'status' => IngestionJobStatus::PROCESSING,
             'started_at' => now(),
         ]);
     }
@@ -42,12 +45,12 @@ class DocumentProcessingStatusService
     public function markAsCompleted(Document $document, DocumentVersion $version, IngestionJob $ingestionJob): void
     {
         $document->update([
-            'status' => 'completed',
+            'status' => DocumentStatus::COMPLETED,
             'processed_at' => now(),
         ]);
-        $version->update(['processing_state' => 'completed']);
+        $version->update(['processing_state' => DocumentVersionProcessingState::COMPLETED]);
         $ingestionJob->update([
-            'status' => 'completed',
+            'status' => IngestionJobStatus::COMPLETED,
             'completed_at' => now(),
         ]);
     }
@@ -63,13 +66,13 @@ class DocumentProcessingStatusService
      */
     public function markAsFailed(Document $document, DocumentVersion $version, IngestionJob $ingestionJob, string $errorMessage): void
     {
-        $document->update(['status' => 'failed']);
+        $document->update(['status' => DocumentStatus::FAILED]);
         $version->update([
-            'processing_state' => 'failed',
+            'processing_state' => DocumentVersionProcessingState::FAILED,
             'error_log' => $errorMessage,
         ]);
         $ingestionJob->update([
-            'status' => 'failed',
+            'status' => IngestionJobStatus::FAILED,
             'error_message' => $errorMessage,
             'failed_at' => now(),
         ]);

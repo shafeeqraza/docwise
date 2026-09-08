@@ -3,6 +3,7 @@
 namespace App\Services\V1\Chat\Messages;
 
 use App\Domains\RAG\DTOs\ChatRagResult;
+use App\Enums\ChatMessageRole;
 use App\Models\ChatMessage;
 use App\Repositories\V1\Contracts\ChatRepositoryInterface;
 
@@ -29,7 +30,7 @@ class MessageWriter
     {
         return $this->chatRepository->createMessage([
             'session_id' => $sessionId,
-            'role' => 'user',
+            'role' => ChatMessageRole::USER,
             'content' => $content,
             'created_at' => now(),
         ]);
@@ -46,7 +47,7 @@ class MessageWriter
     {
         return $this->chatRepository->createMessage([
             'session_id' => $sessionId,
-            'role' => 'assistant',
+            'role' => ChatMessageRole::ASSISTANT,
             'content' => $ragResult->content,
             'tokens_prompt' => $ragResult->tokensPrompt,
             'tokens_completion' => $ragResult->tokensCompletion,
