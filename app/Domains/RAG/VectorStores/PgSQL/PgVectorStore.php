@@ -2,6 +2,7 @@
 
 namespace App\Domains\RAG\VectorStores\PgSQL;
 
+use App\Domains\RAG\Attributes\VectorStoreDriver;
 use App\Domains\RAG\Contracts\VectorStore;
 use App\Domains\RAG\DTOs\ChunkDTO;
 use App\Domains\RAG\Exceptions\VectorStoreException;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\Schema;
  * Uses the DocumentChunk Eloquent model for queries; raw SQL only for
  * pgvector extension, vector column DDL, and vector similarity expressions.
  */
+#[VectorStoreDriver('pgsql')]
 class PgVectorStore implements VectorStore
 {
     use RetriesVectorStoreOperations;
