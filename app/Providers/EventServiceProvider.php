@@ -4,8 +4,6 @@ namespace App\Providers;
 
 use App\Events\DocumentUploaded;
 use App\Listeners\ProcessDocumentUploaded;
-use App\Models\Document;
-use App\Observers\DocumentObserver;
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
 
 class EventServiceProvider extends ServiceProvider
@@ -22,6 +20,6 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Document::observe(DocumentObserver::class);
+        // Model observers are registered on the models via #[ObservedBy].
     }
 }

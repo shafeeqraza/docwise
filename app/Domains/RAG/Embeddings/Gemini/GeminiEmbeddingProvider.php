@@ -2,6 +2,7 @@
 
 namespace App\Domains\RAG\Embeddings\Gemini;
 
+use App\Domains\RAG\Attributes\EmbeddingDriver;
 use App\Domains\RAG\Clients\GeminiApiClient;
 use App\Domains\RAG\Contracts\EmbeddingProvider;
 use App\Domains\RAG\DTOs\EmbeddingDTO;
@@ -17,6 +18,7 @@ use App\Services\V1\Common\LogService;
  * Follows Open/Closed Principle (OCP): Can be extended without modification.
  * Follows Dependency Inversion Principle (DIP): Depends on GeminiApiClient abstraction.
  */
+#[EmbeddingDriver('gemini')]
 class GeminiEmbeddingProvider implements EmbeddingProvider
 {
     use RetriesEmbeddingRequests;

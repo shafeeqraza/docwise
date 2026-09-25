@@ -5,13 +5,15 @@ namespace App\Models;
 use App\Enums\DocumentFileType;
 use App\Enums\DocumentSourceType;
 use App\Enums\DocumentStatus;
+use App\Observers\DocumentObserver;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Str;
 
+#[ObservedBy(DocumentObserver::class)]
 class Document extends Model
 {
     use HasFactory, SoftDeletes;
@@ -47,17 +49,6 @@ class Document extends Model
             'file_type' => DocumentFileType::class,
             'status' => DocumentStatus::class,
         ];
-    }
-
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::creating(function ($model) {
-            if (empty($model->uuid)) {
-                $model->uuid = Str::uuid();
-            }
-        });
     }
 
     // Relationships

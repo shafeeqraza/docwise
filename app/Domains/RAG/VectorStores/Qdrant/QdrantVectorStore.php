@@ -2,6 +2,7 @@
 
 namespace App\Domains\RAG\VectorStores\Qdrant;
 
+use App\Domains\RAG\Attributes\VectorStoreDriver;
 use App\Domains\RAG\Contracts\VectorStore;
 use App\Domains\RAG\DTOs\ChunkDTO;
 use App\Domains\RAG\Exceptions\QdrantException;
@@ -14,6 +15,7 @@ use App\Services\V1\Common\LogService;
  * Follows Single Responsibility Principle (SRP): Only Qdrant-specific vector storage logic.
  * Follows Liskov Substitution Principle (LSP): Fully implements VectorStore interface.
  */
+#[VectorStoreDriver('qdrant')]
 class QdrantVectorStore implements VectorStore
 {
     use RetriesVectorStoreOperations;
