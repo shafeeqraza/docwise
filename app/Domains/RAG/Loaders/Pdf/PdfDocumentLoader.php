@@ -29,6 +29,7 @@ class PdfDocumentLoader implements DocumentLoader
      * @throws UnsupportedDocumentTypeException If the file type is not PDF
      * @throws TextExtractionException If file cannot be loaded or extracted
      */
+    #[\Override]
     public function load(string $filePath): string
     {
         $fileType = $this->extractFileType($filePath);

@@ -19,6 +19,7 @@ class FeedbackRepository implements FeedbackRepositoryInterface
      * @param int $messageId Message ID
      * @return Feedback|null
      */
+    #[\Override]
     public function findByMessageId(int $messageId): ?Feedback
     {
         return Feedback::where('message_id', $messageId)->first();
@@ -30,6 +31,7 @@ class FeedbackRepository implements FeedbackRepositoryInterface
      * @param array $data Feedback data
      * @return Feedback
      */
+    #[\Override]
     public function create(array $data): Feedback
     {
         return Feedback::create($data);
@@ -42,6 +44,7 @@ class FeedbackRepository implements FeedbackRepositoryInterface
      * @param array $data Update data
      * @return bool
      */
+    #[\Override]
     public function update(int $id, array $data): bool
     {
         $feedback = Feedback::find($id);

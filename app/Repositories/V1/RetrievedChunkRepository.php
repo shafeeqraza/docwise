@@ -13,6 +13,7 @@ class RetrievedChunkRepository implements RetrievedChunkRepositoryInterface
      * @param array $data
      * @return RetrievedChunk
      */
+    #[\Override]
     public function create(array $data): RetrievedChunk
     {
         return RetrievedChunk::create($data);

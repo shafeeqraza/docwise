@@ -30,6 +30,7 @@ class DocumentService implements DocumentServiceInterface
 
     ) {}
 
+    #[\Override]
     public function uploadDocument(UploadDocumentDTO $dto): DocumentResource
     {
         return DB::transaction(function () use ($dto) {
@@ -86,6 +87,7 @@ class DocumentService implements DocumentServiceInterface
         });
     }
 
+    #[\Override]
     public function listDocuments(ListDocumentsDTO $dto): PaginatedResourceCollection
     {
         $filters = array_filter([
@@ -102,6 +104,7 @@ class DocumentService implements DocumentServiceInterface
         );
     }
 
+    #[\Override]
     public function getDocument(GetDocumentDTO $dto): DocumentResource
     {
         $document = $this->documentRepository->findByUuidAndCompanyOrFail($dto->documentUuid, $dto->companyId);
@@ -110,6 +113,7 @@ class DocumentService implements DocumentServiceInterface
         return new DocumentResource($document);
     }
 
+    #[\Override]
     public function deleteDocument(DeleteDocumentDTO $dto): bool
     {
         $document = $this->documentRepository->findByUuidAndCompanyOrFail($dto->documentUuid, $dto->companyId);

@@ -8,7 +8,7 @@ use App\Enums\CompanyStatus;
 /**
  * Data Transfer Object for listing companies with filters.
  */
-readonly class ListCompaniesDTO
+final readonly class ListCompaniesDTO
 {
     public function __construct(
         public ?CompanyStatus $status = null,

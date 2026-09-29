@@ -8,7 +8,7 @@ namespace App\Domains\RAG\DTOs;
  * Follows Single Responsibility Principle (SRP): Only data transfer, no behavior.
  * Immutable: Properties are readonly.
  */
-readonly class ChatRagResult
+final readonly class ChatRagResult
 {
     /**
      * @param string $content Generated response content

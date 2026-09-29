@@ -7,7 +7,7 @@ use App\Enums\FeedbackType;
 /**
  * Data Transfer Object for submitting feedback.
  */
-readonly class SubmitFeedbackDTO
+final readonly class SubmitFeedbackDTO
 {
     public function __construct(
         public int $companyId,

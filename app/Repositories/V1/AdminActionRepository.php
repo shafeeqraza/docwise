@@ -21,6 +21,7 @@ class AdminActionRepository implements AdminActionRepositoryInterface
      * @param Request|null $request
      * @return void
      */
+    #[\Override]
     public function logAction(
         User $user,
         string $action,

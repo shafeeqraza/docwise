@@ -48,6 +48,7 @@ class GeminiTokenizer implements TokenizerInterface
      * @param string $text The text to count tokens for
      * @return int Number of tokens
      */
+    #[\Override]
     public function countTokens(string $text): int
     {
         if (empty($text)) {
@@ -63,6 +64,7 @@ class GeminiTokenizer implements TokenizerInterface
      * @param string $text The text to measure
      * @return int Token length
      */
+    #[\Override]
     public function getTokenLength(string $text): int
     {
         return $this->countTokens($text);

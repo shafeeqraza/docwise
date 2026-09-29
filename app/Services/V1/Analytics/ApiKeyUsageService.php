@@ -26,6 +26,7 @@ class ApiKeyUsageService implements ApiKeyUsageServiceInterface
      * @param array<string, mixed> $data Request data
      * @return void
      */
+    #[\Override]
     public function logRequest(CompanyApiKey $apiKey, array $data): void
     {
         $this->usageLogRepository->create([
@@ -52,6 +53,7 @@ class ApiKeyUsageService implements ApiKeyUsageServiceInterface
      * @param string $period Period: 'today', 'week', 'month', 'year', or 'all'
      * @return ApiKeyUsageStatsResource Usage statistics resource
      */
+    #[\Override]
     public function getUsageStats(int $apiKeyId, string $period = 'month'): ApiKeyUsageStatsResource
     {
         $stats = $this->usageLogRepository->getStatsForApiKey($apiKeyId, $period);
@@ -69,6 +71,7 @@ class ApiKeyUsageService implements ApiKeyUsageServiceInterface
      * @param string $period Period: 'today', 'week', 'month', 'year', or 'all'
      * @return ApiKeyUsageStatsResource Usage statistics resource
      */
+    #[\Override]
     public function getUsageByCompany(int $companyId, string $period = 'month'): ApiKeyUsageStatsResource
     {
         $stats = $this->usageLogRepository->getStatsForCompany($companyId, $period);

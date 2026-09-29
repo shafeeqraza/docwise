@@ -5,7 +5,7 @@ namespace App\Services\V1\DTOs;
 /**
  * Data Transfer Object for updating an API key.
  */
-readonly class UpdateApiKeyDTO
+final readonly class UpdateApiKeyDTO
 {
     public function __construct(
         public ?string $name = null,

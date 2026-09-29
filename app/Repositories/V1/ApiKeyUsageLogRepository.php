@@ -16,6 +16,7 @@ class ApiKeyUsageLogRepository implements ApiKeyUsageLogRepositoryInterface
      * @param array<string, mixed> $data
      * @return ApiKeyUsageLog
      */
+    #[\Override]
     public function create(array $data): ApiKeyUsageLog
     {
         return ApiKeyUsageLog::create($data);
@@ -28,6 +29,7 @@ class ApiKeyUsageLogRepository implements ApiKeyUsageLogRepositoryInterface
      * @param string $period Period: 'today', 'week', 'month', 'year', or 'all'
      * @return object|null Statistics object with aggregated data
      */
+    #[\Override]
     public function getStatsForApiKey(int $apiKeyId, string $period): ?object
     {
         $query = ApiKeyUsageLog::where('api_key_id', $apiKeyId);
@@ -51,6 +53,7 @@ class ApiKeyUsageLogRepository implements ApiKeyUsageLogRepositoryInterface
      * @param string $period Period: 'today', 'week', 'month', 'year', or 'all'
      * @return object|null Statistics object with aggregated data
      */
+    #[\Override]
     public function getStatsForCompany(int $companyId, string $period): ?object
     {
         $query = ApiKeyUsageLog::where('company_id', $companyId);
@@ -75,6 +78,7 @@ class ApiKeyUsageLogRepository implements ApiKeyUsageLogRepositoryInterface
      * @param string $period
      * @return Collection
      */
+    #[\Override]
     public function getLogsForApiKey(int $apiKeyId, string $period): Collection
     {
         $query = ApiKeyUsageLog::where('api_key_id', $apiKeyId);
@@ -91,6 +95,7 @@ class ApiKeyUsageLogRepository implements ApiKeyUsageLogRepositoryInterface
      * @param string $period
      * @return Collection
      */
+    #[\Override]
     public function getLogsForCompany(int $companyId, string $period): Collection
     {
         $query = ApiKeyUsageLog::where('company_id', $companyId);

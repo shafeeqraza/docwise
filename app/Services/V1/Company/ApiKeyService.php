@@ -29,6 +29,7 @@ class ApiKeyService implements ApiKeyServiceInterface
      * @param ListApiKeysDTO $dto
      * @return \App\Http\Resources\PaginatedResourceCollection
      */
+    #[\Override]
     public function getAllForCompany(ListApiKeysDTO $dto): PaginatedResourceCollection
     {
         $filters = array_filter([
@@ -51,6 +52,7 @@ class ApiKeyService implements ApiKeyServiceInterface
      * @return ApiKeyResource
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
+    #[\Override]
     public function getApiKey(GetApiKeyDTO $dto): ApiKeyResource
     {
         if (is_numeric($dto->identifier)) {
@@ -72,6 +74,7 @@ class ApiKeyService implements ApiKeyServiceInterface
      * @param CreateApiKeyDTO $dto
      * @return ApiKeyResource
      */
+    #[\Override]
     public function createApiKey(CreateApiKeyDTO $dto): ApiKeyResource
     {
         // Generate the API key
@@ -104,6 +107,7 @@ class ApiKeyService implements ApiKeyServiceInterface
      * @param UpdateApiKeyDTO $dto
      * @return ApiKeyResource
      */
+    #[\Override]
     public function updateApiKey(int $apiKeyId, UpdateApiKeyDTO $dto): ApiKeyResource
     {
         $apiKey = $this->apiKeyRepository->findById($apiKeyId);
@@ -132,6 +136,7 @@ class ApiKeyService implements ApiKeyServiceInterface
      * @param int $apiKeyId
      * @return bool
      */
+    #[\Override]
     public function deleteApiKey(int $apiKeyId): bool
     {
         $apiKey = $this->apiKeyRepository->findById($apiKeyId);
@@ -148,6 +153,7 @@ class ApiKeyService implements ApiKeyServiceInterface
      * @param int $apiKeyId
      * @return ApiKeyResource
      */
+    #[\Override]
     public function regenerateApiKey(int $apiKeyId): ApiKeyResource
     {
         $apiKey = $this->apiKeyRepository->findById($apiKeyId);
@@ -180,6 +186,7 @@ class ApiKeyService implements ApiKeyServiceInterface
      * @param string $key
      * @return CompanyApiKey|null
      */
+    #[\Override]
     public function validateApiKey(string $key): ?CompanyApiKey
     {
         $keyHash = hash('sha256', $key);

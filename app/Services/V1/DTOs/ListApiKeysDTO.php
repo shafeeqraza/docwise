@@ -5,7 +5,7 @@ namespace App\Services\V1\DTOs;
 /**
  * Data Transfer Object for listing API keys with filters.
  */
-readonly class ListApiKeysDTO
+final readonly class ListApiKeysDTO
 {
     public function __construct(
         public int $companyId,

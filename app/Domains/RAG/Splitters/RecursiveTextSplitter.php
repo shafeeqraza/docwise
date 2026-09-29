@@ -91,6 +91,7 @@ class RecursiveTextSplitter implements TextSplitter
      * @param string $text The text to split
      * @return array<string> Array of text chunks
      */
+    #[\Override]
     public function splitText(string $text): array
     {
         if (empty(trim($text))) {

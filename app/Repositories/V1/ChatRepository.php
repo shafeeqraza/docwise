@@ -16,6 +16,7 @@ class ChatRepository implements ChatRepositoryInterface
      * @param int $companyId
      * @return ChatSession|null
      */
+    #[\Override]
     public function findSessionByUuid(string $uuid, int $companyId): ?ChatSession
     {
         return ChatSession::where('uuid', '=', $uuid)
@@ -29,6 +30,7 @@ class ChatRepository implements ChatRepositoryInterface
      * @param array $data
      * @return ChatSession
      */
+    #[\Override]
     public function createSession(array $data): ChatSession
     {
         return ChatSession::create($data);
@@ -41,6 +43,7 @@ class ChatRepository implements ChatRepositoryInterface
      * @param int $limit
      * @return Collection
      */
+    #[\Override]
     public function getMessagesForSession(int $sessionId, int $limit = 10): Collection
     {
         return ChatMessage::where('session_id', '=', $sessionId)
@@ -55,6 +58,7 @@ class ChatRepository implements ChatRepositoryInterface
      * @param array $data
      * @return ChatMessage
      */
+    #[\Override]
     public function createMessage(array $data): ChatMessage
     {
         return ChatMessage::create($data);
@@ -66,6 +70,7 @@ class ChatRepository implements ChatRepositoryInterface
      * @param int $messageId
      * @return ChatMessage|null
      */
+    #[\Override]
     public function findMessageById(int $messageId): ?ChatMessage
     {
         return ChatMessage::find($messageId);
@@ -78,6 +83,7 @@ class ChatRepository implements ChatRepositoryInterface
      * @param array $data
      * @return bool
      */
+    #[\Override]
     public function updateSession(ChatSession $session, array $data): bool
     {
         return $session->update($data);

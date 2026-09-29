@@ -5,7 +5,7 @@ namespace App\Services\V1\DTOs;
 /**
  * Data Transfer Object for sending a chat message.
  */
-readonly class SendChatMessageDTO
+final readonly class SendChatMessageDTO
 {
     public function __construct(
         public int $companyId,

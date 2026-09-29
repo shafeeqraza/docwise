@@ -42,6 +42,7 @@ class QdrantVectorStore implements VectorStore
      * @return bool True if collection exists or was created
      * @throws QdrantException If collection cannot be created
      */
+    #[\Override]
     public function ensureCollection(int $vectorDimension = self::DEFAULT_VECTOR_DIMENSION): bool
     {
         $collectionName = $this->getCollectionName();
@@ -85,6 +86,7 @@ class QdrantVectorStore implements VectorStore
      * @return array<ChunkDTO> Array of chunks (with vector store IDs in metadata if needed)
      * @throws QdrantException If upsert operation fails
      */
+    #[\Override]
     public function upsertChunks(array $chunks): array
     {
         if (empty($chunks)) {
@@ -169,6 +171,7 @@ class QdrantVectorStore implements VectorStore
      * @return array<ChunkDTO> Array of matching chunks
      * @throws QdrantException If search operation fails
      */
+    #[\Override]
     public function search(array $queryVector, int $limit = 10, array $filters = []): array
     {
         $collectionName = $this->getCollectionName();
@@ -247,6 +250,7 @@ class QdrantVectorStore implements VectorStore
      * @param int $documentId The document ID
      * @return bool True if successful
      */
+    #[\Override]
     public function deleteByDocument(int $documentId): bool
     {
         $collectionName = $this->getCollectionName();
