@@ -33,7 +33,7 @@ DocWise is a comprehensive Laravel-based platform that enables companies to prov
 ## 🛠 Tech Stack
 
 -   **Framework**: Laravel 12.x
--   **PHP**: ^8.2
+-   **PHP**: ^8.4
 -   **Database**: MySQL
 -   **Authentication**: Laravel Sanctum (Token-based)
 -   **Vector Store**: Qdrant (for embeddings and similarity search)
@@ -45,12 +45,51 @@ DocWise is a comprehensive Laravel-based platform that enables companies to prov
 
 ## 📋 Requirements
 
--   PHP >= 8.2
+-   PHP >= 8.4 (or Docker, see below)
 -   Composer
 -   MySQL >= 8.0
 -   Node.js >= 18.x & NPM
 -   Redis (optional, for caching and queues)
 -   Qdrant (for vector storage)
+
+---
+
+## 🐳 Run with Docker
+
+`docker compose up -d` starts everything: the PHP 8.4 app runtime (`app` php-fpm, `nginx`, `queue` worker) and its own three data stores. These are separate from any standalone DB containers you already run, and compose never touches those.
+
+| Container          | Role                  | Host port     | Volume                |
+| ------------------ | --------------------- | ------------- | --------------------- |
+| `docwise-postgres` | PostgreSQL + pgvector | `5433`        | `docwise-pgdata`      |
+| `docwise-mysql`    | MySQL                 | `3308`        | `docwise-mysql-data`  |
+| `docwise-qdrant`   | Qdrant vector store   | `6335`/`6336` | `docwise-qdrant-data` |
+
+On first start the databases are created from `DB_USERNAME` / `DB_PASSWORD` / `DB_DATABASE` in `.env`. MySQL's root password is `MYSQL_ROOT_PASSWORD`, which defaults to `DB_PASSWORD`. Data lives in named volumes, so it survives `docker compose down` and container rebuilds.
+
+> ⚠️ `docker compose down -v` **deletes the database volumes**. Don't use `-v` unless you want a clean slate.
+
+Pick one pairing. **pgsql + pgvector** (`DB_CONNECTION=pgsql`, `VECTOR_STORE_DRIVER=pgsql`) is the default. The alternative is **mysql + qdrant** (`DB_CONNECTION=mysql`, `VECTOR_STORE_DRIVER=qdrant`, plus `DOCKER_DB_HOST=docwise-mysql` and `DOCKER_DB_PORT=3306`). pgvector stores embeddings in the main `document_chunks` table, so it only works with Postgres as the primary DB.
+
+```bash
+# 1. First time only: create .env, then fill in keys and DB passwords
+cp .env.example .env
+
+# 2. Build and start everything (the first boot runs composer install)
+docker compose up -d --build
+docker compose exec app php artisan key:generate    # first time only
+docker compose exec app php artisan migrate
+
+# 3. Use it
+#    API:    http://localhost:8000              (APP_PORT)
+#    Widget: http://localhost:8000/widget-demo.html
+docker compose exec app php artisan test
+docker compose logs -f queue
+```
+
+Notes:
+
+-   Inside the containers, `DB_HOST`/`DB_PORT` point at the compose DB service (`DOCKER_DB_HOST`/`DOCKER_DB_PORT`), `QDRANT_HOST` at `docwise-qdrant`, and `PDF_TO_TEXT_PATH` at `/usr/bin/pdftotext`. The `DB_HOST`/`DB_PORT` values in `.env` stay free for a non-Docker setup.
+-   `vendor/` lives in a Docker volume, not the bind-mounted source tree. That keeps requests fast on Windows/macOS. The host `vendor/` is only for IDE autocompletion. After changing dependencies, run `docker compose exec app composer install`.
 
 ---
 
