@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\V1\Concerns\ResponseHandler;
 use App\Http\Requests\CreateApiKeyRequest;
 use App\Http\Requests\UpdateApiKeyRequest;
+use App\Models\CompanyApiKey;
 use App\Services\V1\DTOs\CreateApiKeyDTO;
 use App\Services\V1\DTOs\GetApiKeyDTO;
 use App\Services\V1\DTOs\ListApiKeysDTO;
@@ -29,14 +30,16 @@ class ApiKeyController extends Controller
     ) {}
 
     /**
-     * Get all API keys for the authenticated user's company.
+     * Get all API keys for the current company.
      *
      * @param Request $request
      * @return JsonResponse
      */
     public function index(Request $request): JsonResponse
     {
-        $company = $request->user()->company;
+        $this->authorize('viewAny', CompanyApiKey::class);
+
+        $companyId = $request->attributes->get('current_company_id');
 
         $isActive = $request->query('is_active');
         $isActiveBool = $isActive !== null ? filter_var($isActive, FILTER_VALIDATE_BOOLEAN) : null;
@@ -45,7 +48,7 @@ class ApiKeyController extends Controller
         $perPage = min(max($perPage, 1), 100);
 
         $dto = new ListApiKeysDTO(
-            companyId: $company->id,
+            companyId: $companyId,
             isActive: $isActiveBool,
             search: $request->query('search'),
             perPage: $perPage
@@ -64,14 +67,11 @@ class ApiKeyController extends Controller
      */
     public function show(Request $request, string|int $apiKey): JsonResponse
     {
-        $company = $request->user()->company;
-
-        $dto = new GetApiKeyDTO(
-            companyId: $company->id,
+        $apiKeyResource = $this->apiKeyService->getApiKey(new GetApiKeyDTO(
+            companyId: $request->attributes->get('current_company_id'),
             identifier: $apiKey
-        );
-
-        $apiKeyResource = $this->apiKeyService->getApiKey($dto);
+        ));
+        $this->authorize('view', $apiKeyResource->resource);
 
         return $this->respondResource(
             $apiKeyResource,
@@ -87,6 +87,8 @@ class ApiKeyController extends Controller
      */
     public function store(CreateApiKeyRequest $request): JsonResponse
     {
+        $this->authorize('create', CompanyApiKey::class);
+
         try {
             DB::beginTransaction();
             $companyId = $request->attributes->get('current_company_id');
@@ -128,17 +130,14 @@ class ApiKeyController extends Controller
      */
     public function update(UpdateApiKeyRequest $request, string|int $apiKey): JsonResponse
     {
+        $apiKeyResource = $this->apiKeyService->getApiKey(new GetApiKeyDTO(
+            companyId: $request->attributes->get('current_company_id'),
+            identifier: $apiKey
+        ));
+        $this->authorize('update', $apiKeyResource->resource);
+
         try {
             DB::beginTransaction();
-            $company = $request->user()->company;
-
-            // Get API key ID first
-            $getDto = new GetApiKeyDTO(
-                companyId: $company->id,
-                identifier: $apiKey
-            );
-            $apiKeyResource = $this->apiKeyService->getApiKey($getDto);
-            $apiKeyId = $apiKeyResource->id;
 
             $validated = $request->validated();
             $updateDto = new UpdateApiKeyDTO(
@@ -150,7 +149,7 @@ class ApiKeyController extends Controller
                 expiresAt: $validated['expires_at'] ?? null
             );
 
-            $updatedApiKey = $this->apiKeyService->updateApiKey($apiKeyId, $updateDto);
+            $updatedApiKey = $this->apiKeyService->updateApiKey($apiKeyResource->id, $updateDto);
 
             DB::commit();
 
@@ -173,19 +172,15 @@ class ApiKeyController extends Controller
      */
     public function destroy(Request $request, string|int $apiKey): JsonResponse
     {
+        $apiKeyResource = $this->apiKeyService->getApiKey(new GetApiKeyDTO(
+            companyId: $request->attributes->get('current_company_id'),
+            identifier: $apiKey
+        ));
+        $this->authorize('delete', $apiKeyResource->resource);
+
         try {
             DB::beginTransaction();
-            $company = $request->user()->company;
-
-            // Get API key ID first
-            $getDto = new GetApiKeyDTO(
-                companyId: $company->id,
-                identifier: $apiKey
-            );
-            $apiKeyResource = $this->apiKeyService->getApiKey($getDto);
-            $apiKeyId = $apiKeyResource->id;
-
-            $this->apiKeyService->deleteApiKey($apiKeyId);
+            $this->apiKeyService->deleteApiKey($apiKeyResource->id);
             DB::commit();
 
             return $this->respondMessage('API key revoked successfully');
@@ -204,19 +199,15 @@ class ApiKeyController extends Controller
      */
     public function regenerate(Request $request, string|int $apiKey): JsonResponse
     {
+        $apiKeyResource = $this->apiKeyService->getApiKey(new GetApiKeyDTO(
+            companyId: $request->attributes->get('current_company_id'),
+            identifier: $apiKey
+        ));
+        $this->authorize('regenerate', $apiKeyResource->resource);
+
         try {
             DB::beginTransaction();
-            $company = $request->user()->company;
-
-            // Get API key ID first
-            $getDto = new GetApiKeyDTO(
-                companyId: $company->id,
-                identifier: $apiKey
-            );
-            $apiKeyResource = $this->apiKeyService->getApiKey($getDto);
-            $apiKeyId = $apiKeyResource->id;
-
-            $resource = $this->apiKeyService->regenerateApiKey($apiKeyId);
+            $resource = $this->apiKeyService->regenerateApiKey($apiKeyResource->id);
             DB::commit();
 
             return $this->respondResource(

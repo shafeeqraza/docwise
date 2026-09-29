@@ -43,12 +43,13 @@ interface ChatRepositoryInterface
     public function createMessage(array $data): ChatMessage;
 
     /**
-     * Find chat message by ID.
+     * Find a chat message by ID within a session.
      *
      * @param int $messageId
+     * @param int $sessionId
      * @return ChatMessage|null
      */
-    public function findMessageById(int $messageId): ?ChatMessage;
+    public function findMessageInSession(int $messageId, int $sessionId): ?ChatMessage;
 
     /**
      * Update session.

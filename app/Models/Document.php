@@ -6,7 +6,9 @@ use App\Enums\DocumentFileType;
 use App\Enums\DocumentSourceType;
 use App\Enums\DocumentStatus;
 use App\Observers\DocumentObserver;
+use App\Policies\DocumentPolicy;
 use Illuminate\Database\Eloquent\Attributes\ObservedBy;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[ObservedBy(DocumentObserver::class)]
+#[UsePolicy(DocumentPolicy::class)]
 class Document extends Model
 {
     use HasFactory, SoftDeletes;
