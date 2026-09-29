@@ -30,6 +30,7 @@ class TxtDocumentLoader implements DocumentLoader
      * @throws UnsupportedDocumentTypeException If the file type is not supported
      * @throws TextExtractionException If file cannot be loaded or read
      */
+    #[\Override]
     public function load(string $filePath): string
     {
         // Extract file extension from path/URL

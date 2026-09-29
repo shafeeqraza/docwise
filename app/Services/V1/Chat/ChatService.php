@@ -38,6 +38,7 @@ class ChatService implements ChatServiceInterface
      * @param SendChatMessageDTO $dto
      * @return ChatSessionResource
      */
+    #[\Override]
     public function sendMessage(SendChatMessageDTO $dto): ChatSessionResource
     {
         return $this->sendMessageUseCase->execute($dto);
@@ -51,6 +52,7 @@ class ChatService implements ChatServiceInterface
      * @return AnonymousResourceCollection
      * @throws ChatSessionNotFound
      */
+    #[\Override]
     public function getMessages(GetChatMessagesDTO $dto): AnonymousResourceCollection
     {
         $session = $this->chatRepository->findSessionByUuid($dto->sessionUuid, $dto->companyId);
@@ -72,6 +74,7 @@ class ChatService implements ChatServiceInterface
      * @return bool
      * @throws ChatMessageNotFound
      */
+    #[\Override]
     public function submitFeedback(SubmitFeedbackDTO $dto): bool
     {
         $message = $this->chatRepository->findMessageById($dto->messageId);

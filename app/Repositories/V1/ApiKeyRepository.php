@@ -17,6 +17,7 @@ class ApiKeyRepository implements ApiKeyRepositoryInterface
      * @param int $perPage
      * @return LengthAwarePaginator
      */
+    #[\Override]
     public function getAllForCompany(int $companyId, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = CompanyApiKey::where('company_id', $companyId);
@@ -46,6 +47,7 @@ class ApiKeyRepository implements ApiKeyRepositoryInterface
      * @param int $id
      * @return CompanyApiKey|null
      */
+    #[\Override]
     public function findById(int $id): ?CompanyApiKey
     {
         return CompanyApiKey::find($id);
@@ -57,6 +59,7 @@ class ApiKeyRepository implements ApiKeyRepositoryInterface
      * @param string $uuid
      * @return CompanyApiKey|null
      */
+    #[\Override]
     public function findByUuid(string $uuid): ?CompanyApiKey
     {
         return CompanyApiKey::where('uuid', $uuid)->first();
@@ -68,6 +71,7 @@ class ApiKeyRepository implements ApiKeyRepositoryInterface
      * @param string $keyHash
      * @return CompanyApiKey|null
      */
+    #[\Override]
     public function findByKeyHash(string $keyHash): ?CompanyApiKey
     {
         return CompanyApiKey::where('key_hash', $keyHash)->first();
@@ -79,6 +83,7 @@ class ApiKeyRepository implements ApiKeyRepositoryInterface
      * @param string $keyPrefix
      * @return Collection
      */
+    #[\Override]
     public function findByKeyPrefix(string $keyPrefix): Collection
     {
         return CompanyApiKey::where('key_prefix', $keyPrefix)->get();
@@ -90,6 +95,7 @@ class ApiKeyRepository implements ApiKeyRepositoryInterface
      * @param array $data
      * @return CompanyApiKey
      */
+    #[\Override]
     public function create(array $data): CompanyApiKey
     {
         return CompanyApiKey::create($data);
@@ -102,6 +108,7 @@ class ApiKeyRepository implements ApiKeyRepositoryInterface
      * @param array $data
      * @return bool
      */
+    #[\Override]
     public function update(CompanyApiKey $apiKey, array $data): bool
     {
         return $apiKey->update($data);
@@ -113,6 +120,7 @@ class ApiKeyRepository implements ApiKeyRepositoryInterface
      * @param CompanyApiKey $apiKey
      * @return bool
      */
+    #[\Override]
     public function delete(CompanyApiKey $apiKey): bool
     {
         return $apiKey->delete();
@@ -124,6 +132,7 @@ class ApiKeyRepository implements ApiKeyRepositoryInterface
      * @param CompanyApiKey $apiKey
      * @return bool
      */
+    #[\Override]
     public function updateLastUsed(CompanyApiKey $apiKey): bool
     {
         return $apiKey->update(['last_used_at' => now()]);

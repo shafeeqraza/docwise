@@ -8,7 +8,7 @@ use App\Enums\DocumentStatus;
 /**
  * Data Transfer Object for listing documents with filters.
  */
-readonly class ListDocumentsDTO
+final readonly class ListDocumentsDTO
 {
     public function __construct(
         public int $companyId,

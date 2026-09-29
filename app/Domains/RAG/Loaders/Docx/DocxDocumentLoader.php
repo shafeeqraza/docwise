@@ -28,6 +28,7 @@ class DocxDocumentLoader implements DocumentLoader
      * @throws UnsupportedDocumentTypeException If the file type is not DOCX
      * @throws TextExtractionException If file cannot be loaded or extracted
      */
+    #[\Override]
     public function load(string $filePath): string
     {
         $fileType = $this->extractFileType($filePath);

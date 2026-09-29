@@ -9,7 +9,7 @@ use App\Enums\CompanyStatus;
 /**
  * Data Transfer Object for creating a company.
  */
-readonly class CreateCompanyDTO
+final readonly class CreateCompanyDTO
 {
     public function __construct(
         public string $name,

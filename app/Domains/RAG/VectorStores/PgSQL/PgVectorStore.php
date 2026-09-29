@@ -52,6 +52,7 @@ class PgVectorStore implements VectorStore
      * @return bool True if extension and indexes exist or were created
      * @throws VectorStoreException If setup fails
      */
+    #[\Override]
     public function ensureCollection(int $vectorDimension = self::DEFAULT_VECTOR_DIMENSION): bool
     {
         try {
@@ -85,6 +86,7 @@ class PgVectorStore implements VectorStore
      * @return array<ChunkDTO> Array of chunks (unchanged, as vectors are stored in DB)
      * @throws VectorStoreException If upsert operation fails
      */
+    #[\Override]
     public function upsertChunks(array $chunks): array
     {
         if (empty($chunks)) {
@@ -150,6 +152,7 @@ class PgVectorStore implements VectorStore
      * @return array<ChunkDTO> Array of matching chunks
      * @throws VectorStoreException If search operation fails
      */
+    #[\Override]
     public function search(array $queryVector, int $limit = 10, array $filters = []): array
     {
         return $this->retryWithBackoff(
@@ -218,6 +221,7 @@ class PgVectorStore implements VectorStore
      * @param int $documentId The document ID
      * @return bool True if successful
      */
+    #[\Override]
     public function deleteByDocument(int $documentId): bool
     {
         try {

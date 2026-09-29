@@ -5,7 +5,7 @@ namespace App\Services\V1\DTOs;
 /**
  * Data Transfer Object for creating an API key.
  */
-readonly class CreateApiKeyDTO
+final readonly class CreateApiKeyDTO
 {
     public function __construct(
         public int $companyId,

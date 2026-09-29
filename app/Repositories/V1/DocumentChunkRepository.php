@@ -14,6 +14,7 @@ class DocumentChunkRepository implements DocumentChunkRepositoryInterface
      * @param array $data Chunk data
      * @return DocumentChunk The created chunk
      */
+    #[\Override]
     public function create(array $data): DocumentChunk
     {
         return DocumentChunk::create($data);
@@ -25,6 +26,7 @@ class DocumentChunkRepository implements DocumentChunkRepositoryInterface
      * @param array<array> $chunksData Array of chunk data arrays
      * @return array<DocumentChunk> Array of created chunks
      */
+    #[\Override]
     public function createBatch(array $chunksData): array
     {
         $chunks = [];
@@ -40,6 +42,7 @@ class DocumentChunkRepository implements DocumentChunkRepositoryInterface
      * @param int $id Chunk ID
      * @return DocumentChunk|null
      */
+    #[\Override]
     public function findById(int $id): ?DocumentChunk
     {
         return DocumentChunk::find($id);
@@ -51,6 +54,7 @@ class DocumentChunkRepository implements DocumentChunkRepositoryInterface
      * @param int $documentId Document ID
      * @return array<DocumentChunk>
      */
+    #[\Override]
     public function findByDocumentId(int $documentId): array
     {
         return DocumentChunk::where('document_id', $documentId)
@@ -65,6 +69,7 @@ class DocumentChunkRepository implements DocumentChunkRepositoryInterface
      * @param int $versionId Version ID
      * @return array<DocumentChunk>
      */
+    #[\Override]
     public function findByVersionId(int $versionId): array
     {
         return DocumentChunk::where('version_id', $versionId)
@@ -79,6 +84,7 @@ class DocumentChunkRepository implements DocumentChunkRepositoryInterface
      * @param int $documentId Document ID
      * @return bool True if successful
      */
+    #[\Override]
     public function deleteByDocumentId(int $documentId): bool
     {
         return DocumentChunk::where('document_id', $documentId)->delete() > 0;
@@ -90,6 +96,7 @@ class DocumentChunkRepository implements DocumentChunkRepositoryInterface
      * @param array<int, array> $updates Map of chunk ID to metadata updates
      * @return int Number of chunks updated
      */
+    #[\Override]
     public function batchUpdateMetadata(array $updates): int
     {
         if (empty($updates)) {
@@ -124,6 +131,7 @@ class DocumentChunkRepository implements DocumentChunkRepositoryInterface
      * @param string $collectionName The Qdrant collection name
      * @return int Number of chunks updated
      */
+    #[\Override]
     public function batchUpdateQdrantIds(array $updates, string $collectionName = 'documents'): int
     {
         if (empty($updates)) {
@@ -160,6 +168,7 @@ class DocumentChunkRepository implements DocumentChunkRepositoryInterface
      * @param array<int, array> $updates Map of chunk ID to field updates
      * @return int Number of chunks updated
      */
+    #[\Override]
     public function batchUpdate(array $updates): int
     {
         if (empty($updates)) {

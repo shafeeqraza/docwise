@@ -33,6 +33,7 @@ class SuperAdminLoginService implements SuperAdminLoginServiceInterface
      * @return array{token: string, token_type: string, user: User}
      * @throws AuthenticationException
      */
+    #[\Override]
     public function login(SuperAdminLoginRequest $req): array
     {
         [$email, $password] = [$req->email, $req->password];
@@ -81,6 +82,7 @@ class SuperAdminLoginService implements SuperAdminLoginServiceInterface
      * @param User $user
      * @return User
      */
+    #[\Override]
     public function getUser(User $user): User
     {
         return $user;

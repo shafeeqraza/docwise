@@ -8,7 +8,7 @@ namespace App\Domains\RAG\DTOs;
  * Follows Single Responsibility Principle (SRP): Only data transfer, no behavior.
  * Immutable: Properties are readonly.
  */
-readonly class ChunkDTO
+final readonly class ChunkDTO
 {
     /**
      * @param string $content Chunk text content

@@ -44,6 +44,7 @@ class OpenAILLMProvider implements LLMProvider
      * @return CompletionDTO The completion DTO
      * @throws \RuntimeException If completion generation fails
      */
+    #[\Override]
     public function generateCompletion(array $messages, array $options = []): CompletionDTO
     {
         $model = $options['model'] ?? 'gpt-4';
@@ -123,6 +124,7 @@ class OpenAILLMProvider implements LLMProvider
      * @param string $model The model name
      * @return bool True if the provider supports the model
      */
+    #[\Override]
     public function supports(string $model): bool
     {
         $normalized = strtolower($model);

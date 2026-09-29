@@ -79,6 +79,7 @@ class GeminiLLMProvider implements LLMProvider
      * @return CompletionDTO The completion DTO
      * @throws \RuntimeException If completion generation fails
      */
+    #[\Override]
     public function generateCompletion(array $messages, array $options = []): CompletionDTO
     {
         $model = $options['model'] ?? 'Gemini 2.5 Flash';
@@ -189,6 +190,7 @@ class GeminiLLMProvider implements LLMProvider
      * @param string $model The model name
      * @return bool True if the provider supports the model
      */
+    #[\Override]
     public function supports(string $model): bool
     {
         $normalized = strtolower($model);

@@ -13,6 +13,7 @@ class UserRepository implements UserRepositoryInterface
      * @param string $email
      * @return User|null
      */
+    #[\Override]
     public function findByEmail(string $email): ?User
     {
         return User::where('email', $email)->first();
@@ -24,6 +25,7 @@ class UserRepository implements UserRepositoryInterface
      * @param User $user
      * @return bool
      */
+    #[\Override]
     public function updateLastLogin(User $user): bool
     {
         return $user->update([

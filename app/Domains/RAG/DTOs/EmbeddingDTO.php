@@ -8,7 +8,7 @@ namespace App\Domains\RAG\DTOs;
  * Follows Single Responsibility Principle (SRP): Only data transfer, no behavior.
  * Immutable: Properties are readonly.
  */
-readonly class EmbeddingDTO
+final readonly class EmbeddingDTO
 {
     /**
      * @param array<int> $vector The embedding vector

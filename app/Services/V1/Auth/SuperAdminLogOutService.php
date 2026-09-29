@@ -24,6 +24,7 @@ class SuperAdminLogOutService implements SuperAdminLogOutServiceInterface
      * @param Request|null $request
      * @return void
      */
+    #[\Override]
     public function logout(User $user): void
     {
         // Revoke current token

@@ -17,6 +17,7 @@ class CompanyRepository implements CompanyRepositoryInterface
      * @param int $perPage
      * @return LengthAwarePaginator
      */
+    #[\Override]
     public function getAll(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
         $query = Company::query();
@@ -55,6 +56,7 @@ class CompanyRepository implements CompanyRepositoryInterface
      * @param int $id
      * @return Company|null
      */
+    #[\Override]
     public function findById(int $id): ?Company
     {
         return Company::find($id);
@@ -66,6 +68,7 @@ class CompanyRepository implements CompanyRepositoryInterface
      * @param string $uuid
      * @return Company|null
      */
+    #[\Override]
     public function findByUuid(string $uuid): ?Company
     {
         return Company::where('uuid', $uuid)->first();
@@ -77,6 +80,7 @@ class CompanyRepository implements CompanyRepositoryInterface
      * @param string $slug
      * @return Company|null
      */
+    #[\Override]
     public function findBySlug(string $slug): ?Company
     {
         return Company::where('slug', $slug)->first();
@@ -88,6 +92,7 @@ class CompanyRepository implements CompanyRepositoryInterface
      * @param array $data
      * @return Company
      */
+    #[\Override]
     public function create(array $data): Company
     {
         return Company::create($data);
@@ -100,6 +105,7 @@ class CompanyRepository implements CompanyRepositoryInterface
      * @param array $data
      * @return bool
      */
+    #[\Override]
     public function update(Company $company, array $data): bool
     {
         return $company->update($data);
@@ -111,6 +117,7 @@ class CompanyRepository implements CompanyRepositoryInterface
      * @param Company $company
      * @return bool
      */
+    #[\Override]
     public function delete(Company $company): bool
     {
         return $company->delete();
@@ -123,6 +130,7 @@ class CompanyRepository implements CompanyRepositoryInterface
      * @param CompanyStatus $status
      * @return bool
      */
+    #[\Override]
     public function updateStatus(Company $company, CompanyStatus $status): bool
     {
         return $company->update(['status' => $status]);

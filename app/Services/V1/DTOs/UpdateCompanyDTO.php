@@ -9,7 +9,7 @@ use App\Enums\CompanyStatus;
 /**
  * Data Transfer Object for updating a company.
  */
-readonly class UpdateCompanyDTO
+final readonly class UpdateCompanyDTO
 {
     public function __construct(
         public ?string $name = null,

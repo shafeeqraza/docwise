@@ -33,6 +33,7 @@ class TiktokenTokenizer implements TokenizerInterface
      * @param string $text The text to count tokens for
      * @return int Number of tokens
      */
+    #[\Override]
     public function countTokens(string $text): int
     {
         $tokens = $this->encoder->encode($text);
@@ -47,6 +48,7 @@ class TiktokenTokenizer implements TokenizerInterface
      * @param array<string> $texts Array of texts to count tokens for
      * @return array<int> Array of token counts (same order as input)
      */
+    #[\Override]
     public function countTokensBatch(array $texts): array
     {
         return array_map(fn(string $text) => $this->countTokens($text), $texts);
@@ -58,6 +60,7 @@ class TiktokenTokenizer implements TokenizerInterface
      * @param string $text The text to measure
      * @return int Token length
      */
+    #[\Override]
     public function getTokenLength(string $text): int
     {
         return $this->countTokens($text);

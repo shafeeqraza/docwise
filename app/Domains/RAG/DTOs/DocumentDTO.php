@@ -10,7 +10,7 @@ use App\Enums\DocumentFileType;
  * Follows Single Responsibility Principle (SRP): Only data transfer, no behavior.
  * Immutable: Properties are readonly.
  */
-readonly class DocumentDTO
+final readonly class DocumentDTO
 {
     /**
      * @param int|null $id Document ID

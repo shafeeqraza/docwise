@@ -7,7 +7,7 @@ use Illuminate\Http\UploadedFile;
 /**
  * Data Transfer Object for document upload.
  */
-readonly class UploadDocumentDTO
+final readonly class UploadDocumentDTO
 {
     public function __construct(
         public int $companyId,

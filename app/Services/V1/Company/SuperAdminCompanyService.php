@@ -33,6 +33,7 @@ class SuperAdminCompanyService implements SuperAdminCompanyServiceInterface
      * @param ListCompaniesDTO $dto
      * @return \App\Http\Resources\PaginatedResourceCollection
      */
+    #[\Override]
     public function getAllCompanies(ListCompaniesDTO $dto): PaginatedResourceCollection
     {
         $filters = array_filter([
@@ -57,6 +58,7 @@ class SuperAdminCompanyService implements SuperAdminCompanyServiceInterface
      * @return CompanyResource
      * @throws \Illuminate\Database\Eloquent\ModelNotFoundException
      */
+    #[\Override]
     public function getCompany(GetCompanyDTO $dto): CompanyResource
     {
         if (is_numeric($dto->identifier)) {
@@ -78,6 +80,7 @@ class SuperAdminCompanyService implements SuperAdminCompanyServiceInterface
      * @param CreateCompanyDTO $dto
      * @return CompanyResource
      */
+    #[\Override]
     public function createCompany(CreateCompanyDTO $dto): CompanyResource
     {
         $slug = $dto->slug ?? Str::slug($dto->name);
@@ -107,6 +110,7 @@ class SuperAdminCompanyService implements SuperAdminCompanyServiceInterface
      * @param UpdateCompanyDTO $dto
      * @return CompanyResource
      */
+    #[\Override]
     public function updateCompany(int $companyId, UpdateCompanyDTO $dto): CompanyResource
     {
         $company = $this->companyRepository->findById($companyId);
@@ -144,6 +148,7 @@ class SuperAdminCompanyService implements SuperAdminCompanyServiceInterface
      * @param int $companyId
      * @return bool
      */
+    #[\Override]
     public function deleteCompany(int $companyId): bool
     {
         $company = $this->companyRepository->findById($companyId);
@@ -160,6 +165,7 @@ class SuperAdminCompanyService implements SuperAdminCompanyServiceInterface
      * @param int $companyId
      * @return CompanyResource
      */
+    #[\Override]
     public function suspendCompany(int $companyId): CompanyResource
     {
         $company = $this->companyRepository->findById($companyId);
@@ -179,6 +185,7 @@ class SuperAdminCompanyService implements SuperAdminCompanyServiceInterface
      * @param int $companyId
      * @return CompanyResource
      */
+    #[\Override]
     public function activateCompany(int $companyId): CompanyResource
     {
         $company = $this->companyRepository->findById($companyId);

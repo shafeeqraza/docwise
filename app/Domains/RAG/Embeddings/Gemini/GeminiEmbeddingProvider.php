@@ -73,6 +73,7 @@ class GeminiEmbeddingProvider implements EmbeddingProvider
      * @return EmbeddingDTO The embedding DTO
      * @throws EmbeddingFailedException
      */
+    #[\Override]
     public function generateEmbedding(string $text, string $model = self::DEFAULT_MODEL): EmbeddingDTO
     {
         $model = $this->normalizeModelName($model);
@@ -97,6 +98,7 @@ class GeminiEmbeddingProvider implements EmbeddingProvider
      * @return array<EmbeddingDTO> Array of embedding DTOs
      * @throws EmbeddingFailedException
      */
+    #[\Override]
     public function generateEmbeddingsBatch(array $texts, string $model = self::DEFAULT_MODEL): array
     {
         if (empty($texts)) {
@@ -276,6 +278,7 @@ class GeminiEmbeddingProvider implements EmbeddingProvider
      * @param string $model The embedding model name
      * @return int The dimension of the embedding vector
      */
+    #[\Override]
     public function getEmbeddingDimension(string $model = self::DEFAULT_MODEL): int
     {
         $model = $this->normalizeModelName($model);
@@ -293,6 +296,7 @@ class GeminiEmbeddingProvider implements EmbeddingProvider
      * @param string $model The embedding model name
      * @return bool True if the provider supports the model
      */
+    #[\Override]
     public function supports(string $model): bool
     {
         $normalizedModel = $this->normalizeModelName($model);
