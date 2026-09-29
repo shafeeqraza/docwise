@@ -1,0 +1,130 @@
+# Local dev stack: `docker compose up -d` starts the PHP 8.4 app runtime and its
+# own three data stores. These are separate from any standalone DB containers you
+# already run (e.g. vector-postgres / mysql-container / qdrant-container); compose
+# never touches those.
+#
+#   docwise-postgres  pgsql + pgvector   host :5433        volume docwise-pgdata
+#   docwise-mysql     mysql              host :3308        volume docwise-mysql-data
+#   docwise-qdrant    qdrant             host :6335/6336   volume docwise-qdrant-data
+#
+# Volumes use fixed names so they outlive the containers.
+# `docker compose down` keeps them; `docker compose down -v` DELETES THE DATA.
+#
+# Inside Docker the app talks to these services by name, over the compose network.
+# DB_CONNECTION, DB_DATABASE, DB_USERNAME, DB_PASSWORD and VECTOR_STORE_DRIVER
+# still come from .env. For mysql, also set DOCKER_DB_HOST=docwise-mysql and
+# DOCKER_DB_PORT=3306.
+
+x-php-env: &php-env
+  DB_HOST: ${DOCKER_DB_HOST:-docwise-postgres}
+  DB_PORT: ${DOCKER_DB_PORT:-5432}
+  QDRANT_HOST: http://docwise-qdrant
+  QDRANT_PORT: 6333
+  PDF_TO_TEXT_PATH: /usr/bin/pdftotext
+
+x-php-service: &php-service
+  image: docwise-php:8.4
+  build:
+    context: .
+    dockerfile: docker/php/Dockerfile
+    args:
+      UID: ${UID:-1000}
+      GID: ${GID:-1000}
+  volumes:
+    - .:/var/www/html
+    # Keep dependencies off the slow host bind mount.
+    - vendor:/var/www/html/vendor
+  environment: *php-env
+
+services:
+  app:
+    <<: *php-service
+    container_name: docwise-app
+    healthcheck:
+      # Healthy once the entrypoint has finished `composer install` into the vendor volume.
+      test: ["CMD", "test", "-f", "/var/www/html/vendor/autoload.php"]
+      interval: 5s
+      start_period: 5m
+    depends_on:
+      docwise-postgres:
+        condition: service_healthy
+      docwise-mysql:
+        condition: service_healthy
+      docwise-qdrant:
+        condition: service_started
+
+  queue:
+    <<: *php-service
+    container_name: docwise-queue
+    command: ["php", "artisan", "queue:work", "--tries=3", "--timeout=300"]
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: docwise-nginx
+    ports:
+      - "${APP_PORT:-8000}:80"
+    volumes:
+      - ./public:/var/www/html/public:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+
+  docwise-postgres:
+    image: pgvector/pgvector:pg16
+    container_name: docwise-postgres
+    restart: unless-stopped
+    ports:
+      - "${DOCKER_PG_PORT:-5433}:5432"
+    environment:
+      # Used when initialising the empty volume on first start.
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: ${DB_DATABASE:-docwise}
+    volumes:
+      - docwise-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  docwise-mysql:
+    image: mysql:8.0.39-debian
+    container_name: docwise-mysql
+    restart: unless-stopped
+    ports:
+      - "${DOCKER_MYSQL_PORT:-3308}:3306"
+    environment:
+      # Used when initialising the empty volume on first start.
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-${DB_PASSWORD}}
+      MYSQL_DATABASE: ${DB_DATABASE:-docwise}
+    volumes:
+      - docwise-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  docwise-qdrant:
+    image: qdrant/qdrant:v1.16.3
+    container_name: docwise-qdrant
+    restart: unless-stopped
+    ports:
+      - "${DOCKER_QDRANT_PORT:-6335}:6333"
+      - "${DOCKER_QDRANT_GRPC_PORT:-6336}:6334"
+    volumes:
+      - docwise-qdrant-data:/qdrant/storage
+
+volumes:
+  docwise-pgdata:
+    name: docwise-pgdata
+  docwise-mysql-data:
+    name: docwise-mysql-data
+  docwise-qdrant-data:
+    name: docwise-qdrant-data
+  vendor:
