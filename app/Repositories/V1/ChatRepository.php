@@ -65,15 +65,18 @@ class ChatRepository implements ChatRepositoryInterface
     }
 
     /**
-     * Find chat message by ID.
+     * Find a chat message by ID within a session.
      *
      * @param int $messageId
+     * @param int $sessionId
      * @return ChatMessage|null
      */
     #[\Override]
-    public function findMessageById(int $messageId): ?ChatMessage
+    public function findMessageInSession(int $messageId, int $sessionId): ?ChatMessage
     {
-        return ChatMessage::find($messageId);
+        return ChatMessage::where('id', '=', $messageId)
+            ->where('session_id', '=', $sessionId)
+            ->first();
     }
 
     /**

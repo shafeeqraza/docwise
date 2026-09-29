@@ -72,12 +72,21 @@ class ChatService implements ChatServiceInterface
      *
      * @param SubmitFeedbackDTO $dto
      * @return bool
+     * @throws ChatSessionNotFound
      * @throws ChatMessageNotFound
      */
     #[\Override]
     public function submitFeedback(SubmitFeedbackDTO $dto): bool
     {
-        $message = $this->chatRepository->findMessageById($dto->messageId);
+        // Scope the message to the caller's session and company so one tenant's
+        // API key cannot leave feedback on another tenant's messages.
+        $session = $this->chatRepository->findSessionByUuid($dto->sessionUuid, $dto->companyId);
+
+        if (!$session) {
+            throw new ChatSessionNotFound('Chat session not found');
+        }
+
+        $message = $this->chatRepository->findMessageInSession($dto->messageId, $session->id);
 
         if (!$message) {
             throw new ChatMessageNotFound('Chat message not found');
@@ -98,7 +107,7 @@ class ChatService implements ChatServiceInterface
             // Create new feedback
             $this->feedbackRepository->create([
                 'message_id' => $message->id,
-                'session_id' => $message->session_id,
+                'session_id' => $session->id,
                 'feedback_type' => $dto->type,
                 'rating' => $dto->rating,
                 'comment' => $dto->comment,

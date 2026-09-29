@@ -14,7 +14,7 @@ return new class extends Migration
         $dbDriver = DB::connection()->getDriverName();
         $vectorDb = config('vectorstore.default', 'qdrant');
 
-        if ($vectorDb !== 'pgsql' && $dbDriver !== 'pgsql') {
+        if ($vectorDb !== 'pgsql' || $dbDriver !== 'pgsql') {
             return;
         }
 
@@ -31,7 +31,7 @@ return new class extends Migration
         $dbDriver = DB::connection()->getDriverName();
         $vectorDb = config('vectorstore.default', 'qdrant');
 
-        if ($vectorDb !== 'pgsql' && $dbDriver !== 'pgsql') {
+        if ($vectorDb !== 'pgsql' || $dbDriver !== 'pgsql') {
             return;
         }
 

@@ -5,12 +5,15 @@ namespace App\Models;
 use App\Enums\ChatMessageRole;
 use App\Enums\ChatSessionChannel;
 use App\Enums\ChatSessionStatus;
+use App\Policies\ChatSessionPolicy;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
+#[UsePolicy(ChatSessionPolicy::class)]
 class ChatSession extends Model
 {
     use HasFactory;

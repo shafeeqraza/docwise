@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Controllers\V1\Concerns\ResponseHandler;
 use App\Http\Requests\ListDocumentsRequest;
 use App\Http\Requests\UploadDocumentRequest;
+use App\Models\Document;
 use App\Repositories\V1\Contracts\AdminActionRepositoryInterface;
 use App\Services\V1\DTOs\DeleteDocumentDTO;
 use App\Services\V1\DTOs\GetDocumentDTO;
@@ -35,6 +36,8 @@ class DocumentController extends Controller
      */
     public function upload(UploadDocumentRequest $request): JsonResponse
     {
+        $this->authorize('create', Document::class);
+
         $companyId = $request->attributes->get('current_company_id');
         $user = $request->user();
 
@@ -73,6 +76,8 @@ class DocumentController extends Controller
 
     public function index(ListDocumentsRequest $request): JsonResponse
     {
+        $this->authorize('viewAny', Document::class);
+
         $companyId = $request->attributes->get('current_company_id');
 
         $dto = new ListDocumentsDTO(
@@ -114,6 +119,7 @@ class DocumentController extends Controller
         );
 
         $resource = $this->documentService->getDocument($dto);
+        $this->authorize('view', $resource->resource);
 
         // Log admin action
         $this->adminActionRepository->logAction(
@@ -135,15 +141,10 @@ class DocumentController extends Controller
     {
         $companyId = $request->attributes->get('current_company_id');
 
-        // Get document info before deletion for logging
-        $document = null;
-        try {
-            $getDto = new GetDocumentDTO(companyId: $companyId, documentUuid: $uuid);
-            $documentResource = $this->documentService->getDocument($getDto);
-            $document = $documentResource->resource ?? null;
-        } catch (\Exception $e) {
-            // Document might not exist, continue with deletion attempt
-        }
+        // Fetch the document first: the policy needs it, and so does the log entry
+        $getDto = new GetDocumentDTO(companyId: $companyId, documentUuid: $uuid);
+        $document = $this->documentService->getDocument($getDto)->resource;
+        $this->authorize('delete', $document);
 
         $deleteDto = new DeleteDocumentDTO(
             companyId: $companyId,
@@ -159,8 +160,8 @@ class DocumentController extends Controller
             targetCompanyId: $companyId,
             details: [
                 'document_uuid' => $uuid,
-                'document_id' => $document->id ?? null,
-                'document_title' => $document->title ?? null,
+                'document_id' => $document->id,
+                'document_title' => $document->title,
             ],
             request: $request
         );
