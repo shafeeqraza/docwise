@@ -23,9 +23,8 @@ class ProcessDocumentUploaded
      */
     public function handle(DocumentUploaded $event): void
     {
-        // Dispatch the processing job when document is uploaded
-        // Use unique() with ingestion_job_id as key to prevent duplicate jobs
-        // This ensures only one ProcessDocument job is queued per ingestion job
+        // ProcessDocument is unique per document version (see uniqueId()) and is
+        // queued only after the upload transaction commits.
         ProcessDocument::dispatch(
             $event->document,
             $event->version,

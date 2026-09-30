@@ -55,6 +55,14 @@ interface DocumentChunkRepositoryInterface
     public function deleteByDocumentId(int $documentId): bool;
 
     /**
+     * Delete chunks by version ID.
+     *
+     * @param int $versionId Version ID
+     * @return bool True if any chunks were deleted
+     */
+    public function deleteByVersionId(int $versionId): bool;
+
+    /**
      * Batch update chunk metadata.
      *
      * @param array<int, array> $updates Map of chunk ID to metadata updates

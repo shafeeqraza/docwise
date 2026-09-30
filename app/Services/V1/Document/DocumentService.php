@@ -38,7 +38,7 @@ class DocumentService implements DocumentServiceInterface
             $checksum = $this->fileStorageService->calculateChecksumFromFile($dto->file);
 
             // Check for duplicate before storing
-            // $this->validationService->checkDuplicate($dto->companyId, $checksum);
+            $this->validationService->checkDuplicate($dto->companyId, $checksum);
 
             // Store file only if not a duplicate
             $storageResult = $this->fileStorageService->storeFile($dto->companyId, $dto->file);

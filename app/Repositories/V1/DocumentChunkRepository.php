@@ -91,6 +91,18 @@ class DocumentChunkRepository implements DocumentChunkRepositoryInterface
     }
 
     /**
+     * Delete chunks by version ID.
+     *
+     * @param int $versionId Version ID
+     * @return bool True if any chunks were deleted
+     */
+    #[\Override]
+    public function deleteByVersionId(int $versionId): bool
+    {
+        return DocumentChunk::where('version_id', $versionId)->delete() > 0;
+    }
+
+    /**
      * Batch update chunk metadata.
      *
      * @param array<int, array> $updates Map of chunk ID to metadata updates
