@@ -2,7 +2,7 @@
 
 namespace App\Services\V1\Chat\Session;
 
-use App\Domains\RAG\DTOs\ChatRagResult;
+use App\Models\ChatMessage;
 use App\Models\ChatSession;
 use App\Repositories\V1\Contracts\ChatRepositoryInterface;
 
@@ -22,14 +22,16 @@ class SessionStatsUpdater
      * Update session statistics after message generation.
      *
      * @param ChatSession $session
-     * @param ChatRagResult $ragResult
+     * @param ChatMessage $assistantMessage The persisted assistant reply
      * @return void
      */
-    public function update(ChatSession $session, ChatRagResult $ragResult): void
+    public function update(ChatSession $session, ChatMessage $assistantMessage): void
     {
         $this->chatRepository->updateSession($session, [
             'message_count' => $session->message_count + 2, // User + assistant
-            'total_tokens' => $session->total_tokens + $ragResult->tokensPrompt + $ragResult->tokensCompletion,
+            'total_tokens' => $session->total_tokens
+                + (int) $assistantMessage->tokens_prompt
+                + (int) $assistantMessage->tokens_completion,
         ]);
     }
 }

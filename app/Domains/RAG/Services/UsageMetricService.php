@@ -2,7 +2,6 @@
 
 namespace App\Domains\RAG\Services;
 
-use App\Domains\RAG\DTOs\ChunkDTO;
 use App\Enums\UsageMetricType;
 use App\Models\UsageMetric;
 
@@ -31,22 +30,24 @@ class UsageMetricService
     /**
      * Record document processing metrics with cost tracking.
      *
+     * Every chunk of a processed document is embedded (the ingestion pipeline
+     * fails otherwise), so the embedding count equals the chunk count.
+     *
      * @param int $companyId Company ID
-     * @param array<ChunkDTO> $chunks Array of processed chunks
+     * @param int $chunkCount Number of chunks created
+     * @param int $totalTokens Tokens across all chunks
+     * @param string $embeddingModel Model used for the embeddings
      * @return void
      */
-    public function recordDocumentProcessing(int $companyId, array $chunks): void
+    public function recordDocumentProcessing(int $companyId, int $chunkCount, int $totalTokens, string $embeddingModel): void
     {
-        if (empty($chunks)) {
+        if ($chunkCount === 0) {
             return;
         }
 
-        $chunkCount = count($chunks);
-        $totalTokens = array_sum(array_map(fn($chunk) => $chunk->tokens, $chunks));
-        $embeddingsGenerated = count(array_filter($chunks, fn($chunk) => $chunk->embedding !== null));
+        $embeddingsGenerated = $chunkCount;
 
         // Calculate estimated costs
-        $embeddingModel = $chunks[0]->embedding?->model ?? 'models/gemini-embedding-001';
         $estimatedCost = $this->calculateEmbeddingCost($totalTokens, $embeddingModel);
 
         // Update daily metrics

@@ -11,7 +11,6 @@ use App\Domains\RAG\Exceptions\VectorStoreException;
 use App\Domains\RAG\Factories\DocumentLoaderFactory;
 use App\Domains\RAG\Factories\EmbeddingProviderFactory;
 use App\Domains\RAG\Services\TextChunkingService;
-use App\Domains\RAG\Services\UsageMetricService;
 use App\Domains\RAG\Validators\TokenLimitValidator;
 use App\Repositories\V1\Contracts\DocumentChunkRepositoryInterface;
 use App\Services\V1\Common\LogService;
@@ -36,7 +35,6 @@ class DocumentIngestionPipeline
         private VectorStore $vectorStore,
         private DocumentChunkRepositoryInterface $chunkRepository,
         private TokenLimitValidator $tokenLimitValidator,
-        private UsageMetricService $usageMetricService,
         private LogService $logService
     ) {}
 
@@ -52,7 +50,7 @@ class DocumentIngestionPipeline
      */
     public function process(DocumentDTO $document, array $options = []): array
     {
-        $totalSteps = 8;
+        $totalSteps = 7;
         $currentStep = 0;
         $overallStartTime = microtime(true);
         $stepTimings = [];
@@ -120,19 +118,9 @@ class DocumentIngestionPipeline
         }, ['chunk_count' => $chunkCount]);
         $stepTimings['Updating metadata'] = $this->getLastBenchmarkDuration();
 
-        // Step 8: Update usage metrics
-        $this->updateProgress($options, ++$currentStep, $totalSteps, 'Recording metrics');
-        $companyId = $options['company_id'] ?? null;
-        if ($companyId) {
-            $this->benchmarkStep('Recording metrics', function() use ($companyId, $chunksWithEmbeddings) {
-                $this->usageMetricService->recordDocumentProcessing($companyId, $chunksWithEmbeddings);
-            }, ['chunk_count' => $chunkCount]);
-            $stepTimings['Recording metrics'] = $this->getLastBenchmarkDuration();
-        } else {
-            $stepTimings['Recording metrics'] = 0;
-        }
+        // Usage metrics are recorded by the RecordDocumentUsage listener on DocumentProcessed.
 
-        // Step 9: Call completion callback if provided (for updating version, etc.)
+        // Call completion callback if provided (for updating version, etc.)
         if (isset($options['on_complete']) && is_callable($options['on_complete'])) {
             $options['on_complete'](count($chunksWithEmbeddings), $options['embedding_model'] ?? null);
         }
@@ -241,6 +229,8 @@ class DocumentIngestionPipeline
 
         $embeddingModel = $options['embedding_model'] ?? 'models/gemini-embedding-001';
 
+        $this->clearPreviousAttempt($options);
+
         // Prepare chunk data for persistence from DTOs
         $chunksData = [];
         foreach ($chunkDTOs as $chunkDTO) {
@@ -273,6 +263,29 @@ class DocumentIngestionPipeline
         }
 
         return $updatedDTOs;
+    }
+
+    /**
+     * Remove chunks and vectors left by an earlier attempt at this version, so a
+     * queue retry re-ingests from scratch instead of duplicating chunks.
+     *
+     * Vectors are cleared by document: a document has a single version today
+     * (DocumentVersionService::createInitialVersion), so this is version-scoped.
+     *
+     * @param array<string, mixed> $options Processing options
+     * @return void
+     */
+    private function clearPreviousAttempt(array $options): void
+    {
+        $documentId = $options['document_id'] ?? null;
+        $versionId = $options['version_id'] ?? null;
+
+        if (!$documentId || !$versionId) {
+            return;
+        }
+
+        $this->vectorStore->deleteByDocument($documentId);
+        $this->chunkRepository->deleteByVersionId($versionId);
     }
 
     /**

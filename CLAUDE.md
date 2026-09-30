@@ -58,7 +58,8 @@ Request flow: route, then middleware, then controller, then service (via interfa
 
 Framework-light core: `Contracts/`, immutable `DTOs/`, and implementations grouped by provider (`Embeddings/Gemini`, `LLMs/{Gemini,OpenAI}`, `VectorStores/{Qdrant,PgSQL}`, `Loaders/{Pdf,Docx,Txt}`, `Tokenizers/{Gemini,Tiktoken}`).
 
-- **Ingestion**: `DocumentService::uploadDocument` stores the file on Cloudinary and creates the Document, DocumentVersion, and IngestionJob records inside a transaction, then fires `DocumentUploaded`. `ProcessDocumentUploaded` (auto-discovered listener, so `$listen` is empty) dispatches the `ProcessDocument` job, which runs `DocumentIngestionPipeline`: load, chunk, persist chunks, validate token limits, embed, upsert vectors, record Qdrant IDs, record usage. Progress and completion are reported through the `on_progress` and `on_complete` callbacks in `$options`.
+- **Ingestion**: `DocumentService::uploadDocument` stores the file on Cloudinary and creates the Document, DocumentVersion, and IngestionJob records inside a transaction, then fires `DocumentUploaded`. `ProcessDocumentUploaded` (auto-discovered listener, so `$listen` is empty) dispatches the `ProcessDocument` job, which runs `DocumentIngestionPipeline`: load, chunk, persist chunks (after clearing any left by an earlier attempt), validate token limits, embed, upsert vectors, record Qdrant IDs. Progress and completion are reported through the `on_progress` and `on_complete` callbacks in `$options`. On success the job fires `DocumentProcessed`, and usage is recorded by its listener rather than the pipeline. `ProcessDocument` is queued after commit, unique per document+version, retries with backoff, and fails straight away on non-retryable errors (token limit, extraction, missing embedding model); its `failed()` hook marks the ingestion job failed.
+- **Events**: `DocumentUploaded` → `ProcessDocumentUploaded`; `DocumentProcessed` → `RecordDocumentUsage` (queued); `ChatMessageAnswered` (fired by `SendMessage`) → `UpdateChatSessionStats` (sync, because the response reads the stats) and `RecordChatUsage` (queued). All are auto-discovered; check with `php artisan event:list`.
 - **Chat**: `ChatRAGPipeline::execute` embeds the query, searches with a `company_id` filter, and drops low-similarity chunks with `ChunkFilter`. If nothing is relevant it returns a fixed "no information" answer without calling the LLM. Otherwise it builds a context-only system prompt, trims to the token budget with `TokenOptimizer`, and calls the LLM.
 - **Chunking** is hybrid: Tiktoken locally for recursive splitting, then the Gemini tokenizer API for final counts.
 
@@ -95,6 +96,7 @@ Other middleware aliases (`superadmin`, `company.admin`, `api.rate_limit`, `auth
 
 ## Gotchas
 
+- The queue's `retry_after` (`DB_QUEUE_RETRY_AFTER`, default 330) must stay above `ProcessDocument::$timeout` (300), or a long ingestion is picked up by a second worker while still running.
 - `DocumentObserver` only assigns a UUID. Don't fire `DocumentUploaded` from a model hook, or documents will be processed twice; `DocumentService` fires it after the version and job exist.
 - `Company::getEmbeddingModel()` throws if `settings.embedding_model` is unset, so a company without that setting fails every ingestion job.
 - `Company` plan limits read `config('billing.plans')`, but there is no `config/billing.php`, so the hardcoded defaults always apply.

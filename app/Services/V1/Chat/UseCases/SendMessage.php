@@ -2,15 +2,14 @@
 
 namespace App\Services\V1\Chat\UseCases;
 
+use App\Events\ChatMessageAnswered;
 use App\Http\Resources\ChatSessionResource;
-use App\Models\ChatSession;
 use App\Services\V1\Chat\Messages\ChatHistoryProvider;
 use App\Services\V1\Chat\Messages\MessageWriter;
 use App\Services\V1\Chat\RAG\ChatRagRequestFactory;
 use App\Services\V1\Chat\RAG\ChatRagResponder;
 use App\Services\V1\Chat\RAG\RetrievedChunksPersister;
 use App\Services\V1\Chat\Session\SessionResolver;
-use App\Services\V1\Chat\Session\SessionStatsUpdater;
 use App\Services\V1\DTOs\SendChatMessageDTO;
 
 /**
@@ -27,8 +26,7 @@ class SendMessage
         private readonly ChatHistoryProvider $historyProvider,
         private readonly ChatRagRequestFactory $ragRequestFactory,
         private readonly ChatRagResponder $ragResponder,
-        private readonly RetrievedChunksPersister $chunksPersister,
-        private readonly SessionStatsUpdater $statsUpdater
+        private readonly RetrievedChunksPersister $chunksPersister
     ) {}
 
     /**
@@ -61,8 +59,8 @@ class SendMessage
         // Store retrieved chunks
         $this->chunksPersister->persist($assistantMessage->id, $ragResult->retrievedChunks);
 
-        // Update session statistics
-        $this->statsUpdater->update($session, $ragResult);
+        // Session stats (sync) and usage metrics (queued) are handled by listeners
+        ChatMessageAnswered::dispatch($session, $assistantMessage);
 
         // Refresh session and load latest message
         $session->refresh();
